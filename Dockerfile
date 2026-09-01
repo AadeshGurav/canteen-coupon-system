@@ -22,7 +22,15 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# pip itself is never needed at runtime — gunicorn just imports the packages
+# it already installed — and pip vendors its own internal, frequently-stale
+# copies of a few third-party libraries (msgpack, setuptools) for its own
+# dependency resolution. Those show up as vulnerable "installed" packages to
+# an image scanner even though the app can never reach that code, so pip is
+# uninstalled from the venv right after it finishes installing everything
+# else, instead of leaving that noise for every scan to re-flag.
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall --yes pip
 
 # --- Final: slim runtime image, no compiler, no package manager cache ---
 FROM python:3.12-slim-bookworm
@@ -31,6 +39,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
     APP_PORT=8000
+
+# This base image ships its own separate system pip (independent of the venv
+# copied in below) with the same vendored-dependency issue described above —
+# remove it here too, before it's ever used, rather than leave two copies of
+# the same dead-weight scanner noise.
+RUN /usr/local/bin/python -m pip uninstall --yes pip
 
 # Non-root by default — least privilege for the app process (CLAUDE.md §7).
 RUN groupadd --system canteen \
