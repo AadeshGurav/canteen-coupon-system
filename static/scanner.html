@@ -49,6 +49,19 @@
   #login-error { color: #f87171; font-size: 13px; margin-top: 10px; min-height: 16px; }
   #signed-in-as { font-size: 12px; color: #9aa3b2; margin-top: 4px; }
   #signed-in-as button { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; text-decoration: underline; }
+
+  /* Camera gate — shown instead of silently re-triggering the native
+     permission prompt on every load (see the #camera-gate script below
+     for why that was happening). */
+  #camera-gate {
+    width: 100%; max-width: 420px; margin-top: 16px; padding: 24px 16px;
+    border-radius: 12px; background: #16181d; text-align: center;
+  }
+  #camera-gate p { color: #9aa3b2; font-size: 14px; margin: 0 0 14px; }
+  #camera-gate button {
+    padding: 12px 20px; border: none; border-radius: 8px; background: #10b981;
+    color: #06110c; font-weight: 700; font-size: 15px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -67,8 +80,12 @@
 
   <div id="scan-screen" hidden>
     <div id="signed-in-as"></div>
+    <div id="camera-gate" hidden>
+      <p id="camera-gate-message">This scanner needs camera access to read codes.</p>
+      <button type="button" id="btn-enable-camera">Enable camera</button>
+    </div>
     <div id="reader"></div>
-    <div id="result" class="idle">Point camera at a code</div>
+    <div id="result" class="idle" hidden>Point camera at a code</div>
   </div>
 
 <script>
@@ -140,17 +157,91 @@
     setTimeout(() => { busy = false; }, 2500);
   }
 
-  function startScannerIfNeeded() {
-    if (scannerStarted) return;
-    scannerStarted = true;
-    const scanner = new Html5Qrcode("reader");
-    scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 220 },
-      onScanSuccess,
-      () => {} // ignore per-frame scan failures
-    );
+  // Camera permission handling — deliberately NOT an unconditional
+  // scanner.start() on every load. That silently re-triggered the native
+  // permission prompt (or failed with no visible feedback) on every single
+  // refresh once permission wasn't already granted. Instead: check current
+  // permission state where the browser supports it (Chrome/Android via the
+  // Permissions API; Safari/iOS doesn't expose this for camera, so it falls
+  // through to the button path, which also satisfies iOS's requirement
+  // that camera access be requested from a direct user tap).
+  const cameraGate = document.getElementById("camera-gate");
+  const cameraGateMessage = document.getElementById("camera-gate-message");
+  const readerEl = document.getElementById("reader");
+  const btnEnableCamera = document.getElementById("btn-enable-camera");
+
+  function showCameraGate(message, showButton) {
+    cameraGateMessage.textContent = message;
+    btnEnableCamera.hidden = !showButton;
+    cameraGate.hidden = false;
+    readerEl.hidden = true;
+    resultEl.hidden = true;
   }
+
+  function showCameraReady() {
+    cameraGate.hidden = true;
+    readerEl.hidden = false;
+    resultEl.hidden = false;
+  }
+
+  async function tryStartScanner() {
+    if (scannerStarted) return;
+    // Reveal #reader *before* start() rather than after — html5-qrcode
+    // attaches the <video> element into it immediately, and some browsers
+    // mishandle a video stream attached to a still-`display:none` container.
+    showCameraReady();
+    try {
+      const scanner = new Html5Qrcode("reader");
+      await scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        onScanSuccess,
+        () => {} // ignore per-frame scan failures
+      );
+      scannerStarted = true;
+    } catch (err) {
+      // Distinguish an actual denial (won't self-recover — the browser
+      // doesn't re-prompt once denied, only re-checking site settings does)
+      // from a camera that's simply busy or missing (tapping again may
+      // well work once the other app releases it).
+      const name = err?.name || "";
+      const message =
+        name === "NotAllowedError"
+          ? "Camera access was blocked. Enable it for this page in your browser's site settings, then tap below."
+          : name === "NotFoundError"
+            ? "No camera was found on this device."
+            : "Couldn't access the camera — it may be in use by another app. Tap to try again.";
+      showCameraGate(message, true);
+    }
+  }
+
+  async function initCameraAccess() {
+    if (navigator.permissions?.query) {
+      try {
+        const status = await navigator.permissions.query({ name: "camera" });
+        if (status.state === "granted") {
+          await tryStartScanner();
+          return;
+        }
+        if (status.state === "denied") {
+          showCameraGate(
+            "Camera access is blocked for this page. Enable it in your browser's site settings, then tap below.",
+            true
+          );
+          return;
+        }
+      } catch (_) {
+        // Permissions API doesn't support querying "camera" on this
+        // browser (e.g. Firefox) — fall through to the button path below.
+      }
+    }
+    // No permission-state support (notably Safari/iOS), or state is
+    // "prompt": show the button rather than auto-calling start(), since
+    // iOS requires camera access to be requested from a direct tap anyway.
+    showCameraGate("This scanner needs camera access to read codes.", true);
+  }
+
+  btnEnableCamera.addEventListener("click", tryStartScanner);
 
   function showLogin(errorMessage) {
     loginScreen.hidden = false;
@@ -167,7 +258,7 @@
       clearAuth();
       showLogin();
     });
-    startScannerIfNeeded();
+    initCameraAccess();
   }
 
   document.getElementById("login-form").addEventListener("submit", async (e) => {

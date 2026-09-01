@@ -297,6 +297,34 @@ since MongoDB only applies it the very first time. Two ways out:
   and then bring it back up — it'll reinitialize cleanly against
   whatever's in `.env` now.
 
+### The scanner keeps asking for camera permission every time the page loads
+
+The scanner now checks camera permission on load and shows a clear "Enable
+camera" button instead of silently retrying — if it's still asking every
+time even after tapping that and allowing access, the most common cause is
+an **unstable IP address**: a browser's permission grant is tied to the
+exact address the page was loaded from (e.g. `http://192.168.1.42/...`),
+and phones on a hotspot/router often get handed a *different* IP address
+every time they reconnect, which looks like a brand new site to the
+browser each time — so it forgets the earlier grant. If the scanner phone
+is on the same network as the host machine, set up the optional stable
+hostname (`make mdns-setup`, documented in the README) and access the
+scanner via that `<name>.local` address instead of a raw IP — a stable
+address means a stable permission grant.
+
+### Admin login shows up on a device I didn't expect
+
+This isn't a shared session — session tokens live only in the browser that
+logged in and can't transfer to another device through anything this app
+does. Check `logs/app.log` for `auth.login_succeeded username=...` lines:
+if you see one entry per device/time, someone simply signed in with the
+same known credentials on both, most likely because a browser's saved-
+password feature offered/autofilled it (this can happen across devices
+signed into the same browser account, e.g. the same Google or Apple
+account). If a device is meant to be scan-only, sign it in with a
+`scanner`-role account instead of the admin account — then even if it's
+left signed in, it can't do anything beyond scan.
+
 `(This section is meant to keep growing from real issues hit during the
 pilot. When something breaks, add what happened and how it was fixed here.)`
 
