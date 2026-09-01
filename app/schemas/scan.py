@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScanRequest(BaseModel):
@@ -12,7 +12,13 @@ class ScanRequest(BaseModel):
 
 
 class ScanResult(BaseModel):
-    result: Literal["accepted", "rejected_zero_balance", "rejected_already_scanned", "rejected_unknown_code", "rejected_inactive"]
+    result: Literal[
+        "accepted",
+        "rejected_zero_balance",
+        "rejected_already_scanned",
+        "rejected_unknown_code",
+        "rejected_inactive",
+    ]
     member_name: Optional[str] = None
     member_type: Optional[str] = None
     meal_type: Optional[str] = None
@@ -22,6 +28,8 @@ class ScanResult(BaseModel):
 
 
 class ScanOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str = Field(alias="_id")
     member_id: str
     meal_type: str
@@ -30,9 +38,6 @@ class ScanOut(BaseModel):
     via_grace: bool = False
     reversed: bool = False
     reversed_at: Optional[datetime] = None
-
-    class Config:
-        populate_by_name = True
 
 
 class ReversalRequest(BaseModel):

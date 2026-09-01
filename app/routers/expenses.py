@@ -1,20 +1,22 @@
+import logging
 from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.database import expenses, topups
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
+logger = logging.getLogger(__name__)
 
 
 class ExpenseCreate(BaseModel):
-    category: str
-    description: str
-    amount: float
+    category: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    amount: float = Field(ge=0)
     date: date
-    created_by: str
+    created_by: str = Field(min_length=1)
 
 
 @router.post("")
@@ -23,6 +25,13 @@ async def add_expense(payload: ExpenseCreate):
     doc["date"] = datetime.combine(payload.date, datetime.min.time())
     result = await expenses.insert_one(doc)
     doc["_id"] = str(result.inserted_id)
+    logger.info(
+        "expense.logged category=%s amount=%.2f date=%s by=%s",
+        payload.category,
+        payload.amount,
+        payload.date,
+        payload.created_by,
+    )
     return doc
 
 
