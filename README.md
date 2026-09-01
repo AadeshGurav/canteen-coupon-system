@@ -132,10 +132,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # MongoDB must be running locally (or point MONGO_URI at another instance)
-cp .env.example .env  # then fill in UPI_ID etc.
+cp .env.example .env
 
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+Then open the Settings page in the admin dashboard and set the canteen's
+timezone and UPI details — those live in the database, not `.env` (see "Key
+design decisions" below).
 
 Then, on the counter phone (same local network), open:
 `http://<host-device-ip-or-dns-name>:8000/static/scanner.html`
@@ -178,11 +182,12 @@ make up          # copies .env.example -> .env on first run, then builds + start
 ```
 
 Before deploying for real, open `.env` and set a real `MONGO_ROOT_PASSWORD`
-(`openssl rand -base64 24` is a good way to generate one), `HTTP_PORT` if
-80 is already taken on the host, and `LOCAL_TIMEZONE` to the canteen's actual
-IANA timezone (e.g. `Asia/Kolkata`) — left at the default `UTC`, meal windows
-will be checked against UTC time instead of the canteen's own clock.
-Everything else has a sane default.
+(`openssl rand -base64 24` is a good way to generate one) and `HTTP_PORT` if
+80 is already taken on the host. Everything else has a sane default. Once
+it's up, open the Settings page in the admin dashboard and set the
+canteen's timezone (e.g. `Asia/Kolkata`) and UPI details — left at the
+default `UTC` timezone, meal windows will be checked against UTC time
+instead of the canteen's own clock.
 
 ```bash
 make logs         # follow logs from all three containers
@@ -310,12 +315,18 @@ private, which it is by default alongside this repo).
   style — a naive ISO timestamp with no UTC offset is parsed by a browser's
   `Date` constructor as *local* time, which was silently misdisplaying every
   scan/top-up timestamp in the admin dashboard by the admin's own UTC offset.
-- **Meal windows are local time, not UTC.** `LOCAL_TIMEZONE` (an IANA name
-  like `Asia/Kolkata`, default `UTC`) tells the server what "07:00" in a meal
+- **Meal windows are local time, not UTC.** `local_timezone` (an IANA name
+  like `Asia/Kolkata`, default `UTC`) — set on the Settings page, stored in
+  the database, not an env var — tells the server what "07:00" in a meal
   window actually means. Internally everything runs on UTC (`to_local()` in
   `app/utils/meal_window.py` converts only where local wall-clock time
   actually matters — resolving the current meal and the Saturday-brunch-only
   day of week); stored timestamps stay UTC.
+- **Timezone and UPI details are admin settings, not env config.**
+  `local_timezone`, `upi_id`, and `upi_payee_name` live in the same
+  DB-backed settings document as grace allowance and meal windows —
+  editable from the Settings page with no restart, same as everything else
+  an admin might reasonably need to change (CLAUDE.md §7).
 - **Meal windows are configurable, not hardcoded.** Breakfast/lunch/brunch start
   and end times live in the `settings` document in MongoDB
   (`app/core/database.py::get_global_settings`) and are editable via

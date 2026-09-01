@@ -58,7 +58,7 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 - **Unit, not currency.** Every member entity has three balances: `lunch`, `breakfast`, `brunch`. A scan deducts exactly one unit of the relevant type. Top-ups add units. Nothing here is a monetary wallet.
 - **No automatic resets, ever.** Balances are never reset at month-end, term-end, or on any schedule. A balance only changes because of a scan, a scan reversal, a top-up, or a refund. If a member is out of units, they're out — the only thing that changes that is a top-up (or the grace allowance, see below). This is intentional: units purchased don't expire or get wiped by the calendar.
 - **Saturday is different.** On Saturdays there is no separate breakfast/lunch — only a single **brunch** meal. Brunch is a third, independent unit type, only consumable on Saturdays.
-- **Meal windows are configurable, not hardcoded.** Breakfast, lunch, and brunch each have a start/end time. These live in a `settings` document in the database and are editable by the admin — never hardcoded constants in source. Start/end times are the canteen's own local wall-clock hours (e.g. "07:00" means 7am at the canteen) — the server converts its internal UTC clock to the deployment's configured `LOCAL_TIMEZONE` before checking these, not the other way around.
+- **Meal windows are configurable, not hardcoded.** Breakfast, lunch, and brunch each have a start/end time. These live in a `settings` document in the database and are editable by the admin — never hardcoded constants in source. Start/end times are the canteen's own local wall-clock hours (e.g. "07:00" means 7am at the canteen) — the server converts its internal UTC clock to the canteen's timezone (also admin-editable, in that same settings document) before checking these, not the other way around.
 - **One scan per meal window.** A member cannot be scanned twice for the same meal on the same day. This is enforced by checking for an existing accepted, non-reversed scan for that member/meal within the calendar day — not by a separate cooldown timer, so it naturally resets each day with no scheduled job required — and not by the meal's configured clock window, so a counter operator's manual meal-type override (for edge cases) can't fall outside those hours and silently defeat the lock.
 - **Grace allowance.** A member may be allowed to go negative on a balance by a configurable number of units before a hard stop, so a kid isn't turned away mid-week while a parent sorts out payment. This is a **global default in settings**, with an optional **per-member override** for exceptions the admin sets individually. Any scan that was only possible because of the grace allowance (i.e., it pushed the balance negative) must be clearly flagged — both in the stored scan record (`via_grace`) and as a visible badge/indicator wherever scans are shown, so the admin can immediately spot who's eating on credit.
 - **Scan reversal.** If a scan was a mistake (wrong code, operator error, member changes their mind), it can be undone within a configurable window (default 10 minutes) after the scan. Reversing restores the unit and marks the scan as reversed — it does not delete the scan record (audit trail must be preserved).
@@ -116,9 +116,11 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 - This does not automatically deactivate the member — deactivation (if the member is leaving for good) is a separate action via the member's `status` field.
 
 ### 6.8 Settings (Admin)
-All of the following must be stored in the database and editable at runtime — **none of this is a hardcoded constant in source**:
+All of the following must be stored in the database and editable at runtime — **none of this is a hardcoded constant in source, and none of it lives in environment config either**:
 - Grace allowance: enabled/disabled, and default unit count.
 - Meal windows: start/end time for breakfast, lunch, and brunch (brunch applies Saturday only).
+- The canteen's own local timezone (IANA name) — what meal window start/end times above are actually measured in.
+- UPI ID and payee name used to generate a top-up's payment QR (§6.3).
 - Scan reversal window (minutes).
 
 ---

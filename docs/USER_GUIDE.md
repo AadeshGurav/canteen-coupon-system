@@ -148,10 +148,14 @@ Go to **Settings**. These control how the system behaves and can be changed
 at any time without needing a developer — changes take effect immediately,
 no restart required:
 
+- **Timezone** — set this to the canteen's actual location (e.g. `Asia/
+  Kolkata`) before setting meal windows below. Left at the default `UTC`,
+  breakfast/lunch/brunch will be checked against UTC time instead of the
+  canteen's own clock.
 - **Meal windows** — the start/end time for breakfast, lunch, and Saturday
-  brunch, in the canteen's own local time (make sure `LOCAL_TIMEZONE` in the
-  server's environment is set correctly for your location — see the README —
-  or these times will be checked against UTC instead).
+  brunch, in the timezone set just above.
+- **UPI payment** — the UPI ID and payee name shown on a UPI top-up's
+  payment QR (§4.3). Leave the UPI ID blank for a cash-only canteen.
 - **Grace allowance** — whether members can go negative on a balance, and by
   how many units, before being turned away. Enable/disable it and set the
   default unit count here; set a per-member exception on that member's row
