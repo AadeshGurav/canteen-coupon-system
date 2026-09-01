@@ -301,6 +301,12 @@ private, which it is by default alongside this repo).
 
 ### Key design decisions
 
+- **All timestamps are timezone-aware UTC, never naive.** `app/core/database.py`
+  sets `tz_aware=True` on the Motor client and every "now" in application code
+  is `datetime.now(timezone.utc)`, never `datetime.utcnow()`. This isn't just
+  style — a naive ISO timestamp with no UTC offset is parsed by a browser's
+  `Date` constructor as *local* time, which was silently misdisplaying every
+  scan/top-up timestamp in the admin dashboard by the admin's own UTC offset.
 - **Meal windows are configurable, not hardcoded.** Breakfast/lunch/brunch start
   and end times live in the `settings` document in MongoDB
   (`app/core/database.py::get_global_settings`) and are editable via
@@ -316,6 +322,10 @@ private, which it is by default alongside this repo).
 - **QR codes never change.** `qr_code_id` is generated once at member creation
   and reused for every reprint, so a lost card can never create a duplicate
   member entity.
+- **A member with any history can't be hard-deleted.** `DELETE /members/{id}`
+  checks for scans/top-ups/refunds first and refuses (409) if any exist —
+  deleting would orphan those records' `member_id` references. Deactivate via
+  `PATCH {"status": "inactive"}` instead; that's what the dashboard exposes.
 - **Balances never auto-reset.** No month-end, term-end, or scheduled reset
   logic exists anywhere in this codebase, intentionally. A balance only moves
   because of a scan, a reversal, a top-up, or a refund.
