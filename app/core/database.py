@@ -1,4 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 
 from app.core.config import settings
 
@@ -58,12 +59,22 @@ async def get_global_settings() -> dict:
     """Fetch the single global settings document, creating sane defaults if
     missing and backfilling any field added to this document after a given
     deployment's copy was first created — no manual migration needed when
-    a new setting like local_timezone ships."""
-    doc = await settings_collection.find_one({"_id": "global"})
-    if doc is None:
-        doc = {"_id": "global", **_GLOBAL_SETTINGS_DEFAULTS}
-        await settings_collection.insert_one(doc)
-        return doc
+    a new setting like local_timezone ships.
+
+    Creation is a single atomic upsert, not a separate find-then-insert:
+    gunicorn runs multiple worker processes, each running FastAPI's lifespan
+    startup independently, so on a genuinely fresh database more than one
+    worker calls this at the same moment. A plain "if not found, insert_one"
+    here is a real race — the losing worker's insert hits the unique index
+    on _id and raises DuplicateKeyError, crashing that worker's startup.
+    find_one_and_update(upsert=True) delegates the check-and-create to
+    MongoDB as one operation, so concurrent callers can't race it."""
+    doc = await settings_collection.find_one_and_update(
+        {"_id": "global"},
+        {"$setOnInsert": _GLOBAL_SETTINGS_DEFAULTS},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
 
     missing = {key: value for key, value in _GLOBAL_SETTINGS_DEFAULTS.items() if key not in doc}
     if missing:
