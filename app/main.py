@@ -4,7 +4,16 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import ensure_indexes
-from app.routers import members, scan, topups, menu, expenses, settings as settings_router
+from app.routers import (
+    members,
+    scan,
+    topups,
+    menu,
+    menu_categories,
+    expenses,
+    refunds,
+    settings as settings_router,
+)
 
 app = FastAPI(title=settings.app_name)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -22,7 +31,9 @@ app.include_router(members.router)
 app.include_router(scan.router)
 app.include_router(topups.router)
 app.include_router(menu.router)
+app.include_router(menu_categories.router)
 app.include_router(expenses.router)
+app.include_router(refunds.router)
 app.include_router(settings_router.router)
 
 
