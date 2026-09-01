@@ -200,7 +200,23 @@ workarounds for undocumented behavior or fighting the tool you're using.
   now. A future contributor (or agent) should be able to understand the
   history without re-deriving the reasoning.
 
-## 14. Useful Commands (adapt per project)
+## 14. Definition of Done
+
+A feature or change isn't done until:
+
+1. It works end-to-end (backend and frontend, where both apply) — not just
+   the happy path.
+2. Errors are handled explicitly and surfaced clearly, per §8.
+3. Any new configurable value lives in config/settings, not hardcoded, per
+   §7.
+4. Relevant docs (README, user guide, API docs) are updated to reflect it,
+   per §13.
+5. The change is committed in small, reviewable increments with clear
+   messages, per §13.
+
+If a change doesn't meet all five, it's not finished — it's in progress.
+
+## 15. Useful Commands (adapt per project)
 
 ```bash
 # Python
