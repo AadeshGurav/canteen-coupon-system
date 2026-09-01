@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top-ups & Billing — Canteen Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<nav id="admin-nav"></nav>
+<main>
+  <h1>Top-ups &amp; Billing</h1>
+
+  <section class="card">
+    <h2>New top-up</h2>
+    <form id="topup-form">
+      <div class="field">
+        <label for="topup-member">Member</label>
+        <select id="topup-member" required></select>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="topup-lunch">Lunch units</label>
+          <input id="topup-lunch" type="number" value="0" min="0">
+        </div>
+        <div class="field">
+          <label for="topup-breakfast">Breakfast units</label>
+          <input id="topup-breakfast" type="number" value="0" min="0">
+        </div>
+        <div class="field">
+          <label for="topup-brunch">Brunch units</label>
+          <input id="topup-brunch" type="number" value="0" min="0">
+        </div>
+        <div class="field">
+          <label for="topup-amount">Amount (₹)</label>
+          <input id="topup-amount" type="number" min="0" step="0.01" required>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="topup-method">Payment method</label>
+          <select id="topup-method">
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="topup-created-by">Recorded by</label>
+          <input id="topup-created-by" type="text" required placeholder="Your name">
+        </div>
+      </div>
+
+      <button type="submit">Record top-up &amp; generate bill</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Recent top-ups</h2>
+    <div class="table-wrap">
+      <table id="topups-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Member</th>
+            <th>Units (L/B/Br)</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="topups-body">
+          <tr><td colspan="7" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/topups.js"></script>
+</body>
+</html>

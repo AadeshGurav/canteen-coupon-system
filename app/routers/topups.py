@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException
@@ -9,6 +10,15 @@ from app.schemas.topup import TopupCreate
 from app.services.billing_service import generate_upi_qr, generate_bill_pdf
 
 router = APIRouter(prefix="/topups", tags=["topups"])
+
+
+@router.get("")
+async def list_topups(member_id: Optional[str] = None, limit: int = 200):
+    query = {"member_id": member_id} if member_id else {}
+    docs = await topups.find(query).sort("created_at", -1).to_list(length=min(limit, 1000))
+    for d in docs:
+        d["_id"] = str(d["_id"])
+    return docs
 
 
 @router.post("")
