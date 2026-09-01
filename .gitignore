@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+venv/
+generated_bills/
+generated_qr/
+.DS_Store
