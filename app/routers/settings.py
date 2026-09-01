@@ -67,6 +67,15 @@ class SettingsUpdate(BaseModel):
         return value
 
 
+@router.get("/branding")
+async def get_branding():
+    """The one setting the login page needs before anyone has a session —
+    deliberately public and deliberately just this one field, not the rest
+    of GET /settings (grace allowance, UPI id, etc. stay behind login)."""
+    global_settings = await get_global_settings()
+    return {"app_name": global_settings["app_name"]}
+
+
 @router.get("", dependencies=[Depends(require_role("admin", "counter"))])
 async def get_settings():
     return await get_global_settings()
