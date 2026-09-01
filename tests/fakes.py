@@ -11,6 +11,23 @@ class _Result:
             setattr(self, key, value)
 
 
+class FakeCursor:
+    """Stands in for Motor's cursor — just enough of `.sort().to_list()` for
+    the handful of services that need a filtered/sorted list rather than a
+    single document."""
+
+    def __init__(self, docs: list[dict]):
+        self._docs = docs
+
+    def sort(self, key: str, direction: int = 1) -> "FakeCursor":
+        self._docs = sorted(self._docs, key=lambda d: _get_nested(d, key), reverse=(direction == -1))
+        return self
+
+    async def to_list(self, length: int | None = None) -> list[dict]:
+        docs = self._docs if length is None else self._docs[:length]
+        return [dict(d) for d in docs]
+
+
 class FakeCollection:
     def __init__(self):
         self._docs: dict[ObjectId, dict] = {}
@@ -21,18 +38,34 @@ class FakeCollection:
                 return dict(doc)
         return None
 
+    def find(self, query: dict | None = None) -> FakeCursor:
+        query = query or {}
+        return FakeCursor([dict(doc) for doc in self._docs.values() if _matches(doc, query)])
+
     async def insert_one(self, doc: dict) -> _Result:
         doc = dict(doc)
         doc.setdefault("_id", ObjectId())
         self._docs[doc["_id"]] = doc
         return _Result(inserted_id=doc["_id"])
 
-    async def update_one(self, query: dict, update: dict) -> _Result:
+    async def update_one(self, query: dict, update: dict, upsert: bool = False) -> _Result:
         for doc in self._docs.values():
             if _matches(doc, query):
-                _apply_update(doc, update)
-                return _Result(matched_count=1)
-        return _Result(matched_count=0)
+                _apply_update(doc, update, is_insert=False)
+                return _Result(matched_count=1, upserted_id=None)
+
+        if not upsert:
+            return _Result(matched_count=0, upserted_id=None)
+
+        # Mongo's upsert seeds the new doc from the query's equality fields,
+        # then layers $setOnInsert and $set on top — enough for how this
+        # codebase actually uses upsert (idempotent "create if missing" keyed
+        # by a few plain-equality fields, never a query operator).
+        new_doc = {k: v for k, v in query.items() if not isinstance(v, dict)}
+        new_doc["_id"] = ObjectId()
+        _apply_update(new_doc, update, is_insert=True)
+        self._docs[new_doc["_id"]] = new_doc
+        return _Result(matched_count=0, upserted_id=new_doc["_id"])
 
     async def delete_one(self, query: dict) -> _Result:
         for doc_id, doc in list(self._docs.items()):
@@ -73,13 +106,34 @@ def _matches(doc: dict, query: dict) -> bool:
                     return False
                 if op == "$lte" and not (actual is not None and actual <= operand):
                     return False
-        elif actual != expected:
+                if op == "$in" and actual not in operand:
+                    return False
+                if op == "$ne" and _contains_or_equals(actual, operand):
+                    return False
+        elif not _contains_or_equals(actual, expected):
             return False
     return True
 
 
-def _apply_update(doc: dict, update: dict) -> None:
+def _contains_or_equals(actual, expected) -> bool:
+    """Mongo's own equality semantics: `{"tags": "x"}` matches a document
+    whose `tags` field is either exactly "x" or a list containing "x" — used
+    here for notifications' `visible_roles` array field."""
+    if isinstance(actual, list):
+        return expected in actual
+    return actual == expected
+
+
+def _apply_update(doc: dict, update: dict, is_insert: bool = False) -> None:
     for op, fields in update.items():
-        if op == "$set":
+        # $setOnInsert only takes effect on the insert half of an upsert,
+        # same as real Mongo — applying it on every matched update would
+        # let it silently overwrite fields a real $set/$addToSet changed.
+        if op == "$set" or (op == "$setOnInsert" and is_insert):
             for key, value in fields.items():
                 _set_nested(doc, key, value)
+        elif op == "$addToSet":
+            for key, value in fields.items():
+                current = doc.setdefault(key, [])
+                if value not in current:
+                    current.append(value)

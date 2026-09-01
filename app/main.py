@@ -12,9 +12,13 @@ from app.core.logging_config import configure_logging
 from app.routers import (
     auth,
     expenses,
+    ingredients,
     members,
     menu,
     menu_categories,
+    notifications,
+    purchase_schedule,
+    recipes,
     refunds,
     scan,
     topups,
@@ -58,6 +62,10 @@ app.include_router(menu_categories.router)
 app.include_router(expenses.router)
 app.include_router(refunds.router)
 app.include_router(settings_router.router)
+app.include_router(ingredients.router)
+app.include_router(recipes.router)
+app.include_router(purchase_schedule.router)
+app.include_router(notifications.router)
 
 
 @app.exception_handler(Exception)

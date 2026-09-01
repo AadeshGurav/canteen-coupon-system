@@ -25,6 +25,10 @@ expenses = db["expenses"]
 settings_collection = db["settings"]
 users = db["users"]
 sessions = db["sessions"]
+ingredients = db["ingredients"]
+recipes = db["recipes"]
+purchase_schedule_items = db["purchase_schedule_items"]
+notifications = db["notifications"]
 
 
 async def ensure_indexes():
@@ -43,6 +47,14 @@ async def ensure_indexes():
     # its own expires_at is in the past — no scheduled cleanup job needed,
     # same reasoning as the scan-window design elsewhere in this codebase.
     await sessions.create_index("expires_at", expireAfterSeconds=0)
+    await ingredients.create_index("name", unique=True)
+    # dish_name_lower: recipes are looked up by a menu entry's item name,
+    # case-insensitively ("Dal" and "dal" are the same dish) — a unique
+    # index on the normalized form prevents two recipes silently shadowing
+    # each other for what a menu entry would treat as the same dish.
+    await recipes.create_index("dish_name_lower", unique=True)
+    await purchase_schedule_items.create_index([("date", 1), ("ingredient_id", 1)])
+    await notifications.create_index([("type", 1), ("date", 1), ("meal_type", 1)])
 
 
 _GLOBAL_SETTINGS_DEFAULTS = {
@@ -65,6 +77,11 @@ _GLOBAL_SETTINGS_DEFAULTS = {
     # Shown in the dashboard's nav bar and browser tab title — purely
     # cosmetic branding, not the FastAPI/PDF app_name in app.core.config.
     "app_name": "Canteen Coupon System",
+    # How far ahead of a meal window's start a "start prepping" notification
+    # fires, and how many days ahead of an ingredient's purchase date a
+    # "purchase due" notification fires — see app/services/notification_service.py.
+    "prep_lead_minutes": 60,
+    "purchase_lead_days": 1,
 }
 
 
