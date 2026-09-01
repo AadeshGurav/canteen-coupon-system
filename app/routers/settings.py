@@ -54,6 +54,10 @@ class SettingsUpdate(BaseModel):
     unit_prices: UnitPrices | None = None
     # Shown in the dashboard's nav bar and browser tab title.
     app_name: str | None = Field(default=None, min_length=1)
+    # How far ahead of a meal/purchase date the notification bell reminds —
+    # see app/services/notification_service.py.
+    prep_lead_minutes: int | None = Field(default=None, ge=0)
+    purchase_lead_days: int | None = Field(default=None, ge=0)
 
     @field_validator("local_timezone")
     @classmethod

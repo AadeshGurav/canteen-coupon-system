@@ -99,6 +99,23 @@
       <p class="empty-state">Shown in the nav bar and browser tab title across this dashboard.</p>
     </section>
 
+    <section class="card">
+      <h2>Notification reminders</h2>
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="prep-lead-minutes">Prep reminder lead time (minutes)</label>
+          <input id="prep-lead-minutes" type="number" min="0">
+        </div>
+        <div class="field">
+          <label for="purchase-lead-days">Purchase reminder lead time (days)</label>
+          <input id="purchase-lead-days" type="number" min="0">
+        </div>
+      </div>
+      <p class="empty-state">How far ahead of a planned meal / an ingredient's purchase date the
+        notification bell reminds you. Only fires for a meal that actually has something planned, or a
+        purchase-schedule item that's still unbought.</p>
+    </section>
+
     <button type="submit">Save settings</button>
   </form>
 </main>

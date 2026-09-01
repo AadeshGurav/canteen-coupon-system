@@ -132,6 +132,74 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
   color: var(--accent);
 }
 
+/* Notification bell — persistent, in-app reminders (prep/purchase due).
+   See app/services/notification_service.py for what generates these. */
+.notif-bell-wrap { position: relative; }
+.notif-bell {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  min-height: auto;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+.notif-bell:hover { color: var(--text); background: var(--surface-hover); }
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger);
+  color: #1a0505;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-modal);
+  z-index: 100;
+  animation: dialog-in 150ms var(--ease);
+}
+.notif-item {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.notif-item-message { font-size: 12px; color: var(--text-muted); }
+.notif-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 16px;
+  min-height: auto;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.notif-dismiss:hover { color: var(--text); }
+.notif-empty { padding: var(--space-3); text-align: center; color: var(--text-faint); font-size: 13px; }
+
 main {
   max-width: 1100px;
   margin: 0 auto;

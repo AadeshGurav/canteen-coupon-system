@@ -52,6 +52,8 @@ async function loadSettings() {
     document.getElementById("price-lunch").value = settings.unit_prices.lunch;
     document.getElementById("price-breakfast").value = settings.unit_prices.breakfast;
     document.getElementById("price-brunch").value = settings.unit_prices.brunch;
+    document.getElementById("prep-lead-minutes").value = settings.prep_lead_minutes;
+    document.getElementById("purchase-lead-days").value = settings.purchase_lead_days;
     renderMealWindowFields(settings.meal_windows);
     await loadTimezoneOptions(settings.local_timezone);
   } catch (err) {
@@ -86,6 +88,8 @@ document.getElementById("settings-form").addEventListener("submit", async (e) =>
         breakfast: Number(document.getElementById("price-breakfast").value) || 0,
         brunch: Number(document.getElementById("price-brunch").value) || 0,
       },
+      prep_lead_minutes: Number(document.getElementById("prep-lead-minutes").value) || 0,
+      purchase_lead_days: Number(document.getElementById("purchase-lead-days").value) || 0,
       meal_windows,
     });
     showToast("Settings saved.");
