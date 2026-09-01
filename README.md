@@ -1,5 +1,8 @@
 # Canteen Coupon System
 
+[![CI](https://github.com/AadeshGurav/canteen-coupon-system/actions/workflows/ci.yml/badge.svg)](https://github.com/AadeshGurav/canteen-coupon-system/actions/workflows/ci.yml)
+[![Publish Docker image](https://github.com/AadeshGurav/canteen-coupon-system/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/AadeshGurav/canteen-coupon-system/actions/workflows/docker-publish.yml)
+
 A unit-based meal coupon system for a school canteen — replaces paper tracking of
 student and staff meal entitlements with QR-code scanning, configurable balances,
 and admin-managed billing. Built for a single campus, single canteen pilot.
@@ -112,6 +115,13 @@ Dockerfile            — multi-stage build for the app image (see "Production
 docker-compose.yml    — the three-container stack: nginx, app, mongo
 gunicorn_conf.py      — production ASGI process config (workers, timeouts)
 Makefile              — `make up` / `make down` / `make logs` / etc.
+scripts/
+  smoke_test.py       — end-to-end check against a *running* stack, used
+                        locally and by ci.yml (see "CI/CD" below)
+.github/
+  workflows/ci.yml             — lint, test, docker build+scan+smoke test
+  workflows/docker-publish.yml — builds + publishes the image to GHCR
+  dependabot.yml               — weekly dependency/base-image/action updates
 ```
 
 ### Running locally
@@ -259,6 +269,35 @@ fresh `make up`.
 Docker isolates the network path, but it doesn't add authentication to the
 app itself — see "Not yet built" below. Don't put this stack on the open
 internet without addressing that first, Docker networking or not.
+
+### CI/CD
+
+Two workflows under `.github/workflows/`:
+
+- **`ci.yml`** — runs on every push and pull request. Three parallel jobs:
+  `lint` (black + ruff), `test` (pytest with coverage), and `docker` (builds
+  the production image, scans it with [Trivy](https://github.com/aquasecurity/trivy)
+  and fails the build on any CRITICAL/HIGH vulnerability with a fix
+  available, then brings up the full nginx+app+mongo stack with
+  `docker compose up --wait` and runs `scripts/smoke_test.py` through nginx
+  — the same member → credit → scan flow described above, now run on every
+  change instead of by hand).
+- **`docker-publish.yml`** — on a push to `main` or a `v*.*.*` tag: builds
+  for `linux/amd64` + `linux/arm64`, runs the same Trivy gate, and publishes
+  to `ghcr.io/aadeshgurav/canteen-coupon-system` tagged by branch, semver
+  (on a tag), short commit SHA, and `latest` (default branch only).
+
+**Dependabot** (`.github/dependabot.yml`) opens weekly PRs for Python
+dependencies, the Docker base images (`Dockerfile` + `docker-compose.yml`'s
+`mongo`/`nginx` tags), and the GitHub Actions versions pinned in these
+workflows — so a CVE fix doesn't quietly go stale the way the
+`python-multipart`/`fastapi` pins did before this pipeline existed to catch it
+(see the git history on `requirements.txt` for what that scan actually found).
+
+To pull a published image directly instead of building locally, point
+`docker-compose.yml`'s `app` service at `image: ghcr.io/aadeshgurav/canteen-coupon-system:latest`
+instead of `build: .` (requires `docker login ghcr.io` if the package is
+private, which it is by default alongside this repo).
 
 ### Key design decisions
 
