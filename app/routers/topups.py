@@ -1,6 +1,5 @@
 import logging
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("")
-async def list_topups(member_id: Optional[str] = None, limit: int = 200):
+async def list_topups(member_id: str | None = None, limit: int = 200):
     query = {"member_id": member_id} if member_id else {}
     docs = await topups.find(query).sort("created_at", -1).to_list(length=min(limit, 1000))
     for d in docs:
@@ -29,7 +28,7 @@ async def create_topup(payload: TopupCreate):
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found.")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     doc = {
         "member_id": payload.member_id,
         "lunch_units": payload.lunch_units,

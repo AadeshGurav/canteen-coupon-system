@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
@@ -35,7 +35,7 @@ async def create_refund(payload: RefundCreate):
                 detail=f"Cannot refund {requested} {meal_type} units — member only has {balances.get(meal_type, 0)}.",
             )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     new_balances = {
         "lunch": balances.get("lunch", 0) - payload.lunch_units,
         "breakfast": balances.get("breakfast", 0) - payload.breakfast_units,

@@ -2,7 +2,15 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.core.config import settings
 
-client: AsyncIOMotorClient = AsyncIOMotorClient(settings.mongo_uri)
+# tz_aware=True: every datetime read back from Mongo comes back UTC-aware
+# rather than naive. Paired with writing timezone-aware datetimes throughout
+# (datetime.now(timezone.utc), never datetime.utcnow()) so comparisons never
+# mix naive and aware values, and so API responses serialize timestamps with
+# an explicit UTC offset instead of an ambiguous naive one — a naive
+# timestamp like "2026-09-01T10:30:00" is parsed as *local* time by a
+# browser's Date constructor, which was silently misdisplaying every
+# timestamp in the admin dashboard for any admin not in UTC.
+client: AsyncIOMotorClient = AsyncIOMotorClient(settings.mongo_uri, tz_aware=True)
 db = client[settings.mongo_db_name]
 
 # Collections

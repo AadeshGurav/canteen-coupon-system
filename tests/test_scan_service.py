@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -214,7 +214,7 @@ async def test_reversal_fails_outside_the_configured_window(fake_db, monkeypatch
     scan_doc = await scans.find_one({})
     # find_one returns a shallow copy — mutate the fake collection's stored
     # doc directly so the backdated timestamp actually takes effect.
-    scans._docs[scan_doc["_id"]]["scanned_at"] = datetime.utcnow() - timedelta(minutes=11)
+    scans._docs[scan_doc["_id"]]["scanned_at"] = datetime.now(timezone.utc) - timedelta(minutes=11)
 
     result = await scan_service.reverse_scan(str(scan_doc["_id"]), reversed_by="tester")
     assert result["success"] is False
@@ -237,3 +237,20 @@ async def test_reversal_of_nonexistent_scan_fails_cleanly(fake_db, monkeypatch):
     result = await scan_service.reverse_scan(str(ObjectId()), reversed_by="tester")
     assert result["success"] is False
     assert result["message"] == "Scan not found."
+
+
+@pytest.mark.asyncio
+async def test_scanned_at_is_timezone_aware(fake_db, monkeypatch):
+    """Regression guard: a naive datetime.utcnow() timestamp is silently
+    misread as *local* time by a browser's Date constructor, which was
+    misdisplaying every timestamp in the admin dashboard for any admin not
+    in UTC (see app/core/database.py's tz_aware note). If this ever
+    regresses back to a naive datetime, that bug is back too."""
+    members, scans = fake_db
+    use_settings(monkeypatch)
+    await create_member(members, balances={"lunch": 5, "breakfast": 0, "brunch": 0})
+
+    await scan_service.process_scan("abc123", meal_type_override="lunch")
+    scan_doc = await scans.find_one({})
+
+    assert scan_doc["scanned_at"].tzinfo is not None

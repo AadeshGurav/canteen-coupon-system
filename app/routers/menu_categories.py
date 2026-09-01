@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from pymongo.errors import DuplicateKeyError
@@ -21,7 +21,7 @@ def _serialize(doc: dict) -> dict:
 
 @router.post("")
 async def create_menu_category(payload: MenuCategoryCreate):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     doc = payload.model_dump()
     doc.update({"created_at": now, "updated_at": now})
     try:
@@ -43,7 +43,7 @@ async def update_menu_category(category_id: str, payload: MenuCategoryUpdate):
     updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update.")
-    updates["updated_at"] = datetime.utcnow()
+    updates["updated_at"] = datetime.now(timezone.utc)
 
     try:
         result = await menu_categories.update_one({"_id": _oid(category_id)}, {"$set": updates})
