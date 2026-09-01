@@ -198,6 +198,9 @@ no restart required:
 - **Branding** — the application name shown in the nav bar and browser tab
   across the whole dashboard. Purely cosmetic — rename it to your canteen's
   actual name if you like.
+- **Prep reminder lead time** and **purchase reminder lead time** — how far
+  ahead of a meal / an ingredient's purchase date the notification bell
+  (§12) reminds you.
 
 ## 10. Admin: refunds
 
@@ -212,7 +215,47 @@ why — the actual money movement (cash back, bank transfer) is something you
 handle yourself outside the app. This doesn't deactivate the member; if
 they're leaving for good, also deactivate them (§3.5).
 
-## 11. Admin: managing user accounts
+## 11. Admin/counter: ingredients, recipes & the purchase schedule
+
+Go to **Ingredients & Purchasing**.
+
+- **Ingredients** (admin-only) — the master list of what you buy, with the
+  unit you buy it in (kg, litre, pcs — whatever's natural for that item).
+- **Recipes** (admin-only) — link a dish name to the ingredients it needs.
+  The dish name must match what you type into a menu entry's items list
+  (§7) — spelling matters, but capitalization doesn't ("Dal Rice" and
+  "dal rice" are the same dish). Each ingredient gets a free-text quantity
+  note (e.g. "2kg per 50 servings") rather than an exact number — this
+  system doesn't track expected headcount, so a note is more honest than a
+  precise-looking figure that isn't.
+- **Purchase schedule** (admin generates it; admin and counter both use it)
+  — click **Generate for this range** with a date range covering your
+  planned menu, and one line appears per (date, ingredient) for every
+  planned dish that has a recipe. Running this again over the same or an
+  overlapping range never creates duplicates or resets something already
+  checked off. Check the box next to an item once you've bought it — it
+  records who and when. You can also add something to the list manually
+  (a date, an ingredient, and a note) for anything the menu calendar
+  wouldn't otherwise surface.
+
+## 12. Notifications
+
+The bell icon in the nav bar (every page) shows persistent reminders that
+survive a refresh or logout:
+
+- **Start prepping [meal]** — appears a configurable number of minutes
+  before a planned meal's serving window starts (default 60; set in
+  Settings), but only if something's actually on the calendar for it.
+- **Ingredient purchase due** — appears when there's still something
+  unpurchased on the schedule for a configurable number of days out
+  (default 1 day ahead; set in Settings).
+
+Click the bell to see the list; click the × on any item to dismiss it —
+dismissing only affects your own view, not anyone else's. New reminders are
+checked for automatically every time the bell polls (no need to refresh the
+page); nothing here is email or SMS, it's all in-app.
+
+## 13. Admin: managing user accounts
 
 Go to **Users** to add, edit, or remove the login accounts covered in §1/§2.2
 — this page is admin-only.
@@ -231,7 +274,7 @@ You can't demote, deactivate, or delete your own account from this page —
 that's a deliberate guardrail so an admin can't accidentally lock themselves
 out.
 
-## 12. Troubleshooting
+## 14. Troubleshooting
 
 If something breaks or behaves unexpectedly, check `logs/app.log` on the
 host machine first — every scan decision, top-up, refund, member change, and

@@ -118,6 +118,18 @@ UI) — from then on, all account management happens through the admin-only
 - The primary planning surface is an interactive month calendar (prev/next navigation, current day highlighted, each day's logged meals shown as tags at a glance) — clicking any day opens a dialog pre-filled with that date to log a new entry or review/delete what's already logged there.
 - This is a planning/record tool only — no student- or staff-facing view.
 
+### 6.5.1 Ingredients, Recipes & Purchase Schedule (Admin manages; admin + counter use)
+- Admin maintains an **ingredients** master list (name + the unit it's bought in) and **recipes** — a dish name (matched case-insensitively against a menu entry's item names) linked to the ingredients it needs, each with a free-text quantity note (e.g. "2kg per 50 servings") rather than a precise per-serving quantity model, since this system doesn't track expected headcount per entry.
+- The admin generates a **purchase schedule** for a date range: for every planned menu entry in that range, whichever of its items has a matching recipe contributes one schedule item per ingredient, per date. Generation is idempotent — re-running it over an overlapping range never duplicates an item or resets one that's already been checked off.
+- Admin **and counter** can view the schedule, check items off as purchased (recording who and when), and add ad-hoc manual items not tied to any recipe. Only admin can generate the schedule or delete an item — this mirrors counter's existing scan+billing-only permission boundary (§4).
+
+### 6.5.2 Notifications (Persistent, in-app; all roles)
+- A notification center (bell icon in the dashboard nav) surfaces two kinds of reminder, computed automatically and persisted so they survive a refresh or logout:
+  - **Meal prep reminders** — fires a configurable number of minutes (`prep_lead_minutes`, default 60, admin-editable in Settings) before a meal window starts, but only if something is actually planned on the calendar for that meal/day.
+  - **Purchase-due reminders** — fires when any purchase-schedule item for a configurable number of days ahead (`purchase_lead_days`, default 1) is still unpurchased.
+- Each notification is visible to every role that can act on it (admin and counter) and can be dismissed independently per user — dismissing doesn't hide it for anyone else still working from the same reminder.
+- No new infrastructure: reminders are computed lazily on each `GET /notifications` poll (the dashboard polls automatically, no page needs to be manually refreshed) rather than a scheduled background job, and delivery is in-app only — no email/SMS/push.
+
 ### 6.6 Expense & Revenue Tracking (Admin)
 - Admin can log expenses (category, description, amount, date) — groceries, tables, other overhead.
 - System should provide a simple revenue-vs-expense summary (revenue = confirmed top-ups in a date range, expenses = logged expenses in that range, profit = the difference).
@@ -137,6 +149,7 @@ All of the following must be stored in the database and editable at runtime — 
 - UPI ID and payee name used to generate a top-up's payment QR (§6.3).
 - Scan reversal window (minutes).
 - Application name (branding) — shown in the dashboard's nav bar and browser tab title. Purely cosmetic, but stored the same way as everything else here: DB-backed, editable at runtime, no code change or restart needed.
+- Prep reminder lead time (`prep_lead_minutes`) and purchase reminder lead time (`purchase_lead_days`) — see §6.5.2.
 
 ---
 
@@ -165,6 +178,10 @@ See `app/schemas/` and `app/core/database.py` in the codebase for the authoritat
 - `settings` — single global document: grace allowance config, meal windows, unit prices, timezone, UPI details, reversal window, app name.
 - `users` — login accounts: username, hashed password, role (admin/counter/scanner), active status.
 - `sessions` — opaque server-side session tokens (not JWT), one per login, auto-expiring via a MongoDB TTL index (`SESSION_TTL_HOURS`).
+- `ingredients` — admin-managed master list: name + unit.
+- `recipes` — dish name (matched case-insensitively against menu entries) + the ingredients/quantity notes it needs.
+- `purchase_schedule_items` — one per (date, ingredient): quantity note, purchased state (who/when), and whether it was auto-generated from the menu calendar or added manually.
+- `notifications` — persistent in-app reminders: type, title/message, which roles can see it, and which usernames have dismissed it.
 
 If the code and this PRD ever disagree on a schema detail, the code is the source of truth for *what currently exists*, but any schema change should be reflected back into this PRD and the README (see §11).
 

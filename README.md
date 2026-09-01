@@ -68,7 +68,9 @@ once they see the money land in their own account.
 | Refunds | Admin records a refund (units, pre-filled from the member's actual balance; amount auto-calculated from unit prices) when a member leaves; deducts the balance immediately, payout itself is handled outside the app |
 | Expenses | Log spend, see revenue vs. expense summary |
 | Auth & roles | Login required everywhere; admin/counter/scanner roles with distinct permissions; admin-managed Users page for account CRUD |
-| Settings | Meal windows, unit prices, grace allowance, timezone (dropdown of every IANA zone), UPI details, branding, reversal window — all DB-backed, all editable at runtime |
+| Ingredients & purchasing | Admin-managed ingredients + recipes (dish → ingredients); a purchase schedule auto-generated from the menu calendar (idempotent), viewable/checkable by admin and counter |
+| Notifications | Persistent, in-app, per-user-dismissible reminders — meal prep starting soon, ingredient purchases still due — polled automatically, no email/SMS/push infra |
+| Settings | Meal windows, unit prices, grace allowance, timezone (dropdown of every IANA zone), UPI details, branding, reversal window, notification lead times — all DB-backed, all editable at runtime |
 | Admin dashboard | Browser UI (`/static/admin/`) covering every admin action above — member CRUD, top-ups/billing, scan log & reversal, menu planning, expenses, refunds, settings, users — no more driving the API by hand through `/docs` |
 
 ---
@@ -102,8 +104,13 @@ app/
     billing_service.py   — UPI QR (upi://pay URI) + PDF bill generation
     auth_service.py       — password hashing, session create/validate/delete,
                             initial-admin bootstrap
+    purchase_schedule_service.py — derives purchase-schedule items from
+                            planned menu entries + recipes, idempotently
+    notification_service.py — lazily computes due prep/purchase reminders
+                            on each poll, no scheduled job
   routers/    — HTTP endpoints (auth, users, members, scan, topups, menu,
-                menu_categories, expenses, refunds, settings)
+                menu_categories, ingredients, recipes, purchase_schedule,
+                notifications, expenses, refunds, settings)
   utils/
     meal_window.py       — resolves current meal type from DB-backed settings,
                             handles the Saturday-brunch-only rule
@@ -405,6 +412,21 @@ private, which it is by default alongside this repo).
 - **Top-up/refund amounts are always server-computed**, from `unit_prices` in
   `settings` × the units requested — never accepted as client input — so a
   tampered request body can't record an arbitrary amount.
+- **Notifications are polled, not pushed, and computed lazily.** No
+  websockets/SSE and no scheduled job (no APScheduler/Celery) — the
+  dashboard nav polls `GET /notifications` every ~45s, and that endpoint
+  computes anything newly due (idempotently) before returning the active
+  set. Simpler infrastructure for a low-frequency, non-urgent reminder feed
+  at this system's scale (CLAUDE.md §10).
+- **Recipes match menu items by name, not by ID.** A dish name in a recipe
+  is matched case-insensitively against a menu entry's free-text `items`
+  strings — there's no foreign key from menu_log to a recipe, since the same
+  dish name recurs across many independent menu entries and this system
+  doesn't otherwise force menu items through a controlled vocabulary.
+- **Purchase-schedule generation is idempotent by design**, keyed on
+  (date, ingredient_id) via upsert — re-running it over an overlapping date
+  range never duplicates a line item or resets one someone already checked
+  off or edited.
 - **The initial admin password, if auto-generated, is printed to stdout, not
   logged.** `logger.warning` would persist it into the rotating
   `logs/app.log` file indefinitely; a one-time `print()` reaches the same
