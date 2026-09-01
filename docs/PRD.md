@@ -42,12 +42,24 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 
 ## 4. Users & Roles
 
-| Role | Who | What they do |
+Three login roles exist, each with a real account (username + password) and
+a server-side session — this supersedes the original "no login" decision for
+the admin dashboard and the scanner page (see §9 and the "Superseded
+decisions" note below):
+
+| Role | Who | What they can do |
 |---|---|---|
-| **Admin** | The contractor (client) | Full CRUD on member entities, top-ups & billing, QR generation/reprint, menu planning, expense tracking, settings (grace allowance, meal windows, reversal window), scan reversal. |
-| **Counter operator** | Whoever is staffing the scan point (could be the admin or someone else) | Uses the shared scanner page. No separate login required — this is a single shared station. |
-| **Member entity — student** | A student, represented as a record, not a login-based "account" | Has a QR code. Gets scanned at the counter. Does not use the app directly. |
+| **Admin** | The contractor (client) | Everything: member CRUD, top-ups & billing, QR generation/reprint, menu planning, expense tracking, settings, scan reversal, and managing user accounts (add/edit-role/reset-password/deactivate/delete other users). |
+| **Counter** | Whoever staffs the billing/top-up counter | Scan, plus top-ups & billing. No access to member CRUD, menu planning, expenses, refunds, settings, or user management. |
+| **Scanner** | Whoever staffs the meal-serving scan point | Scan only. Nothing else. |
+| **Member entity — student** | A student, represented as a record, not a login-based "account" | Has a QR code. Gets scanned at the counter. Does not use the app directly and has no login of its own. |
 | **Member entity — staff** | A staff member, same entity model as student with a different `type` | Same as student, different pricing. |
+
+An initial admin account is bootstrapped automatically on first startup from
+`INITIAL_ADMIN_USERNAME`/`INITIAL_ADMIN_PASSWORD` (env config, since this is
+the one credential that has to exist before there's anyone to set it via the
+UI) — from then on, all account management happens through the admin-only
+**Users** page, never `.env`.
 
 **Important modeling decision:** students and staff are **one data type**, `member_entity`, distinguished by a `type` field — not two separate collections/models. This avoids duplicate CRUD logic and duplicate schemas for what is functionally the same entity with different pricing and a couple of type-specific fields (class/roll number vs. staff ID).
 
@@ -82,14 +94,14 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 - Admin can **reprint** a lost/damaged code — this must reuse the existing code identifier, never generate a new one.
 
 ### 6.3 Top-ups & Billing
-- Admin selects a member, enters units to add per meal type, and a payment method: `cash` or `upi`.
+- Admin or counter operator selects a member, enters units to add per meal type, and a payment method: `cash` or `upi`. **The amount is never typed in** — it's calculated automatically from the per-meal-type unit prices set in Settings (§6.8), and the submit action is disabled while every unit is still zero (a zero-unit top-up is meaningless and rejected server-side too).
 - On submit: balances are credited immediately, and a **PDF bill** is generated showing units purchased and the member's new balances.
-- If payment method is `upi`: generate a UPI payment QR (standard `upi://pay` URI scheme — no payment gateway integration) and embed/attach it with the bill. Payment status starts `pending`.
+- If payment method is `upi`: generate a UPI payment QR (standard `upi://pay` URI scheme — no payment gateway integration) and show it in a pop-up at the moment of payment, so the payer can scan it right there — it does **not** appear on the bill PDF itself. Payment status starts `pending`.
 - If payment method is `cash`: payment status is `confirmed` immediately; no UPI QR needed.
 - Admin can manually mark a pending UPI top-up as `confirmed` once they've verified receipt in their own UPI app. There is no automated payment webhook in this build.
 
 ### 6.4 Scanning (Counter Flow)
-- One shared scanner page, browser-based, accessed via a local-network DNS name from a mobile phone camera. No login for this page.
+- One shared scanner page, browser-based, accessed via a local-network DNS name from a mobile phone camera. Requires signing in with an account that has `scanner`, `counter`, or `admin` role (superseding the original "no login" decision — see §9) — the session is remembered on that device/browser until sign-out or expiry, so this is still effectively a fast, shared kiosk in practice, just no longer an open endpoint.
 - On scan: resolve the member by code, determine current meal type from the time of day and day of week (using the configurable meal windows in settings), and apply, in order:
   1. Unknown code → reject, clear message.
   2. Inactive member → reject, clear message.
@@ -103,6 +115,7 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 ### 6.5 Menu Planning (Admin-only)
 - Admin manages **menu categories** as a first-class, CRUD-editable list (e.g. "Jain", "Normal", "Staff") — categories are not a fixed enum in code. Admin can add, rename, or remove categories as the canteen's offering changes.
 - Admin can log what's being served, per date, per meal type, tagged with one or more menu categories (a dish might apply to just "Jain", or to both "Normal" and "Staff").
+- The primary planning surface is an interactive month calendar (prev/next navigation, current day highlighted, each day's logged meals shown as tags at a glance) — clicking any day opens a dialog pre-filled with that date to log a new entry or review/delete what's already logged there.
 - This is a planning/record tool only — no student- or staff-facing view.
 
 ### 6.6 Expense & Revenue Tracking (Admin)
@@ -110,7 +123,7 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 - System should provide a simple revenue-vs-expense summary (revenue = confirmed top-ups in a date range, expenses = logged expenses in that range, profit = the difference).
 
 ### 6.7 Refunds (Admin)
-- If a member leaves the school or otherwise stops using the canteen, the admin can process a refund: specify how many lunch/breakfast/brunch units are being refunded and the refund amount.
+- If a member leaves the school or otherwise stops using the canteen, the admin can process a refund: specify how many lunch/breakfast/brunch units are being refunded. Unit inputs pre-fill from that member's actual current balance (capped there, so a refund can't exceed what they have) and the refund amount is calculated automatically from the same unit prices used for top-ups — never typed in.
 - The **actual money movement is handled by the admin outside the app** (cash back, bank transfer, etc.) — the system's job is to keep the unit ledger accurate and to keep a record of what was refunded, when, and why.
 - Refunding deducts the specified units from the member's balance immediately. A refund cannot request more units than the member currently has.
 - This does not automatically deactivate the member — deactivation (if the member is leaving for good) is a separate action via the member's `status` field.
@@ -119,9 +132,11 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 All of the following must be stored in the database and editable at runtime — **none of this is a hardcoded constant in source, and none of it lives in environment config either**:
 - Grace allowance: enabled/disabled, and default unit count.
 - Meal windows: start/end time for breakfast, lunch, and brunch (brunch applies Saturday only).
-- The canteen's own local timezone (IANA name) — what meal window start/end times above are actually measured in.
+- The canteen's own local timezone (IANA name) — what meal window start/end times above are actually measured in. Chosen from a dropdown listing every IANA zone the server's Python runtime knows (`zoneinfo.available_timezones()`), not freehand text a typo could silently break meal-window matching against.
+- Unit prices — price per lunch/breakfast/brunch unit — used to compute top-up and refund amounts automatically (§6.3, §6.7) instead of an admin typing an amount by hand.
 - UPI ID and payee name used to generate a top-up's payment QR (§6.3).
 - Scan reversal window (minutes).
+- Application name (branding) — shown in the dashboard's nav bar and browser tab title. Purely cosmetic, but stored the same way as everything else here: DB-backed, editable at runtime, no code change or restart needed.
 
 ---
 
@@ -147,7 +162,9 @@ See `app/schemas/` and `app/core/database.py` in the codebase for the authoritat
 - `menu_categories` — admin-managed list of categories (e.g. Jain, Normal, Staff) used to tag menu entries.
 - `refunds` — one record per refund: units deducted, amount, reason, who processed it. The payout itself happens outside the app.
 - `expenses` — logged business expenses.
-- `settings` — single global document: grace allowance config, meal windows, reversal window.
+- `settings` — single global document: grace allowance config, meal windows, unit prices, timezone, UPI details, reversal window, app name.
+- `users` — login accounts: username, hashed password, role (admin/counter/scanner), active status.
+- `sessions` — opaque server-side session tokens (not JWT), one per login, auto-expiring via a MongoDB TTL index (`SESSION_TTL_HOURS`).
 
 If the code and this PRD ever disagree on a schema detail, the code is the source of truth for *what currently exists*, but any schema change should be reflected back into this PRD and the README (see §11).
 
@@ -159,8 +176,15 @@ If the code and this PRD ever disagree on a schema detail, the code is the sourc
 - WhatsApp delivery of bills/PDFs. To be discussed and added later.
 - Searchable, verbose action logging via a dedicated search engine (e.g., Elasticsearch) alongside the primary database. The primary database logs remain the source of truth for now; this is a planned upgrade once the core flow is validated in the pilot.
 - Multi-campus / multi-tenant support.
-- Authentication/authorization on admin endpoints (acceptable for a LAN-only pilot; **must** be addressed before any handoff or exposure beyond the local network).
 - Any student/staff-facing app, portal, or menu view.
+
+**Superseded decision:** Authentication/authorization was originally deferred
+here as "acceptable for a LAN-only pilot." It has since been built (§4, §6.4)
+— stdlib password hashing (`pbkdf2_hmac`) and opaque server-side sessions, no
+new dependency — because a LAN-only pilot still has multiple people with very
+different levels of trust (the contractor vs. a scan-only counter hire)
+sharing the same network, and role separation was worth having from day one
+rather than retrofitting later.
 
 ---
 

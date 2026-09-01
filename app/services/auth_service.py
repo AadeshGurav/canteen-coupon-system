@@ -120,10 +120,17 @@ async def bootstrap_initial_admin() -> None:
     if settings.initial_admin_password:
         logger.info("auth.bootstrap_admin_created username=%s", settings.initial_admin_username)
     else:
-        logger.warning(
-            "auth.bootstrap_admin_created username=%s password=%s "
-            "— no INITIAL_ADMIN_PASSWORD was set, so this was generated. "
-            "Log in and change it from the Users page now.",
-            settings.initial_admin_username,
-            password,
+        # Deliberately NOT logger.warning(): the root logger's handlers
+        # (see app/core/logging_config.py) include a RotatingFileHandler,
+        # which would persist this plaintext password into logs/app.log
+        # indefinitely — a straight violation of "credentials are never
+        # logged" (CLAUDE.md §7). A one-time plain print() reaches the same
+        # console an operator watches on first boot without ever touching
+        # the log file.
+        print(
+            f"auth.bootstrap_admin_created username={settings.initial_admin_username} "
+            f"password={password} — no INITIAL_ADMIN_PASSWORD was set, so this was "
+            "generated. Log in and change it from the Users page now. This password "
+            "will not be shown again and is not written to any log file.",
+            flush=True,
         )

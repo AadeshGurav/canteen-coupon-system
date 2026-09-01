@@ -25,18 +25,27 @@ and either confirms ("go ahead, collect your lunch") or rejects it, instantly.
   units**, and **brunch units** (brunch only applies on Saturdays, when there's a
   single combined meal instead of separate breakfast and lunch).
 - Top up a member's balance when a parent (for a student) or a staff member pays —
-  by cash or by scanning a generated UPI QR code — and get a PDF bill automatically.
+  by cash or by scanning a generated UPI QR code shown in a pop-up — and get a PDF
+  bill automatically, with the amount computed from per-unit prices, never typed
+  in by hand.
 - Print or reprint a member's QR code. Reprinting never issues a new code, so a
   lost card can't create a duplicate record.
 - Set a **grace allowance** — how many meals, if any, a member can take on credit
   before being turned away — globally or per member.
-- Plan the weekly/monthly menu (admin-only planning tool, not shown to students
-  or staff).
+- Plan the menu on an interactive month calendar (admin-only planning tool, not
+  shown to students or staff).
 - Track expenses (groceries, tables, etc.) against revenue to see a simple
   profit picture.
 - Undo a scan by mistake within a configurable time window (default 10 minutes).
-- Adjust meal serving times, grace allowance, and the reversal window from
-  settings — none of this is hardcoded, so it can be tuned without a code change.
+- Adjust meal serving times, unit prices, grace allowance, timezone, branding, and
+  the reversal window from settings — none of this is hardcoded, so it can be
+  tuned without a code change.
+- Manage login accounts and roles (admin/counter/scanner) for everyone else who
+  uses the system.
+
+**Roles:** every page requires signing in. **Admin** has full access;
+**counter** can scan and record top-ups; **scanner** can only scan. See
+`docs/PRD.md` §4 for the full breakdown.
 
 **What it's not:** this doesn't hold or move real money. It tracks meal
 *entitlements*, not a cash wallet. UPI is used only to generate a payment QR code —
@@ -51,14 +60,15 @@ once they see the money land in their own account.
 | QR codes | Generate on creation, print, reprint (same code, never duplicated) |
 | Scanning | Single shared scanner page (phone browser), instant accept/reject, one scan per meal window |
 | Balances | Separate lunch / breakfast / brunch unit counts, grace allowance (global + per-member override), **no automatic resets ever** — only scans, reversals, top-ups, and refunds change a balance |
-| Top-ups & billing | Cash or UPI QR, automatic PDF bill generation, manual UPI payment confirmation |
+| Top-ups & billing | Cash or UPI QR (shown in a pop-up, not on the bill), automatic PDF bill generation, amount auto-calculated from unit prices, manual UPI payment confirmation |
 | Reversal | Undo a mistaken scan within a configurable window, restores the unit |
-| Grace tracking | Any meal given on the grace allowance is flagged (`via_grace`) on the scan record and shown as a badge on the scanner screen |
-| Menu planning | Admin-only calendar/log of what's served, per date, per meal, tagged with admin-managed menu categories (e.g. Jain, Normal, Staff) |
-| Refunds | Admin records a refund (units + amount + reason) when a member leaves; deducts the balance immediately, payout itself is handled outside the app |
+| Grace tracking | Any meal given on the grace allowance is flagged (`via_grace`) on the scan record and shown as a badge on the scanner screen; the Members page shows how many grace units each member has left |
+| Menu planning | Admin-only interactive month calendar of what's served, per date, per meal, tagged with admin-managed menu categories (e.g. Jain, Normal, Staff) |
+| Refunds | Admin records a refund (units, pre-filled from the member's actual balance; amount auto-calculated from unit prices) when a member leaves; deducts the balance immediately, payout itself is handled outside the app |
 | Expenses | Log spend, see revenue vs. expense summary |
-| Settings | Meal windows, grace allowance, reversal window — all DB-backed, all editable at runtime |
-| Admin dashboard | Browser UI (`/static/admin/`) covering every admin action above — member CRUD, top-ups/billing, scan log & reversal, menu planning, expenses, refunds, settings — no more driving the API by hand through `/docs` |
+| Auth & roles | Login required everywhere; admin/counter/scanner roles with distinct permissions; admin-managed Users page for account CRUD |
+| Settings | Meal windows, unit prices, grace allowance, timezone (dropdown of every IANA zone), UPI details, branding, reversal window — all DB-backed, all editable at runtime |
+| Admin dashboard | Browser UI (`/static/admin/`) covering every admin action above — member CRUD, top-ups/billing, scan log & reversal, menu planning, expenses, refunds, settings, users — no more driving the API by hand through `/docs` |
 
 ---
 
@@ -80,24 +90,31 @@ a single `uvicorn` process with zero tooling beyond a browser.
 
 ```
 app/
-  core/       — config (env vars), MongoDB connection/index setup, logging setup
+  core/       — config (env vars), MongoDB connection/index setup, logging
+                setup, security.py (auth dependencies: get_current_user,
+                require_role)
   schemas/    — Pydantic request/response models
   services/   — core business logic
     scan_service.py     — meal window detection, one-scan-per-day lock,
                            grace allowance check, balance deduction, reversal
     qr_service.py        — permanent, reprintable QR code generation
     billing_service.py   — UPI QR (upi://pay URI) + PDF bill generation
-  routers/    — HTTP endpoints (members, scan, topups, menu, menu_categories, expenses, refunds, settings)
+    auth_service.py       — password hashing, session create/validate/delete,
+                            initial-admin bootstrap
+  routers/    — HTTP endpoints (auth, users, members, scan, topups, menu,
+                menu_categories, expenses, refunds, settings)
   utils/
     meal_window.py       — resolves current meal type from DB-backed settings,
                             handles the Saturday-brunch-only rule
     object_id.py          — shared "parse this string as a Mongo id or 400" helper
 static/
-  scanner.html — counter-facing scanner page (plain JS, no framework)
-  admin/       — admin dashboard: member CRUD, top-ups/billing, scan log &
-                 reversal, menu planning, expenses, refunds, settings — one
-                 plain HTML page per area, sharing css/admin.css and
-                 js/api.js + js/nav.js (no build step, no framework)
+  scanner.html — counter-facing scanner page (plain JS, no framework), with
+                 its own lightweight login screen (§ auth above)
+  admin/       — admin dashboard: login, member CRUD, top-ups/billing, scan
+                 log & reversal, menu planning (interactive month calendar),
+                 expenses, refunds, settings, users — one plain HTML page
+                 per area, sharing css/admin.css and js/api.js + js/nav.js
+                 (no build step, no framework)
 tests/
   test_meal_window.py  — meal/window resolution, pure-function unit tests
   test_scan_service.py — the accept/reject/reversal decision tree, against
@@ -137,9 +154,12 @@ cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Then open the Settings page in the admin dashboard and set the canteen's
-timezone and UPI details — those live in the database, not `.env` (see "Key
-design decisions" below).
+The very first startup bootstraps one admin account from
+`INITIAL_ADMIN_USERNAME`/`INITIAL_ADMIN_PASSWORD` in `.env` (a random password
+is generated and logged if left blank) — sign in with that, then add every
+other account from the dashboard's **Users** page. Then open **Settings** and
+set the canteen's timezone, unit prices, and UPI details — those live in the
+database, not `.env` (see "Key design decisions" below).
 
 Then, on the counter phone (same local network), open:
 `http://<host-device-ip-or-dns-name>:8000/static/scanner.html`
@@ -274,9 +294,12 @@ fresh `make up`.
 
 #### Still not covered here
 
-Docker isolates the network path, but it doesn't add authentication to the
-app itself — see "Not yet built" below. Don't put this stack on the open
-internet without addressing that first, Docker networking or not.
+Docker isolates the network path; the app itself now also requires a login
+(see "Key design decisions" below) for every route except the health check
+and the public branding endpoint the login page needs before a session
+exists. Still don't put this stack on the open internet without adding TLS
+(see `nginx/conf.d/canteen.conf`) first — auth alone isn't a substitute for
+encrypting credentials in transit.
 
 ### CI/CD
 
@@ -361,14 +384,31 @@ private, which it is by default alongside this repo).
   (cash, transfer, etc.) is handled by the admin outside the app.
 - **UPI payments**: plain `upi://pay` QR, no payment gateway. Cash top-ups are
   marked `confirmed` immediately; UPI top-ups start `pending` until the admin
-  manually confirms receipt via `POST /topups/{id}/confirm-payment`.
+  manually confirms receipt via `POST /topups/{id}/confirm-payment`. The QR
+  itself is served from `GET /topups/{id}/upi-qr` and shown in a dashboard
+  pop-up at the moment of payment — never printed on the bill PDF.
+- **Auth: stdlib hashing + opaque server-side sessions, not JWT.** Passwords
+  are hashed with `hashlib.pbkdf2_hmac` (260k iterations); sessions are
+  random tokens (`secrets.token_urlsafe`) stored in a `sessions` collection
+  with a MongoDB TTL index for auto-expiry (`SESSION_TTL_HOURS`) — no new
+  dependency (no `passlib`/`bcrypt`/`PyJWT`) for what's a small, well-scoped
+  amount of logic at this system's scale (CLAUDE.md §10), and revoking a
+  session is just deleting a row instead of needing a blocklist.
+- **Three roles**: `admin` (everything), `counter` (scan + top-ups/billing),
+  `scanner` (scan only) — enforced server-side via `require_role(...)`
+  dependencies on every router, and mirrored in the dashboard's nav/UI so a
+  role never sees a button the API would reject anyway.
+- **Top-up/refund amounts are always server-computed**, from `unit_prices` in
+  `settings` × the units requested — never accepted as client input — so a
+  tampered request body can't record an arbitrary amount.
+- **The initial admin password, if auto-generated, is printed to stdout, not
+  logged.** `logger.warning` would persist it into the rotating
+  `logs/app.log` file indefinitely; a one-time `print()` reaches the same
+  console without ever touching a log a later operator or aggregator might
+  read (CLAUDE.md §7: "credentials... never logged").
 
 ### Not yet built (flagged for a later pass — see `docs/PRD.md` §9)
 
-- Auth for the admin endpoints (currently open — fine for a LAN-only pilot, but
-  must be locked down before any handoff or exposure beyond the local network;
-  the Docker network isolation described above narrows *who can reach the
-  app* but doesn't add a login to the app itself).
 - Elasticsearch-backed searchable action log (scans/top-ups currently live only
   in MongoDB; planned once the core flow is validated in the pilot).
 - WhatsApp bill delivery (explicitly deferred).
