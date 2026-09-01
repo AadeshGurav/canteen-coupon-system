@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingredients & Purchasing — Canteen Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<nav id="admin-nav"></nav>
+<main>
+  <h1>Ingredients &amp; Purchasing</h1>
+
+  <section class="card" id="ingredients-card">
+    <h2>Ingredients</h2>
+    <p class="empty-state">The master list recipes are built from — name and the unit you buy it in
+      (kg, litre, pcs, whatever your own convention is).</p>
+    <div class="form-row">
+      <div class="field">
+        <label for="ingredient-name">Name</label>
+        <input id="ingredient-name" type="text" placeholder="e.g. Toor dal">
+      </div>
+      <div class="field">
+        <label for="ingredient-unit">Unit</label>
+        <input id="ingredient-unit" type="text" placeholder="e.g. kg">
+      </div>
+      <div class="field">
+        <button id="btn-add-ingredient" type="button">Add ingredient</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="ingredients-table">
+        <thead><tr><th>Name</th><th>Unit</th><th></th></tr></thead>
+        <tbody id="ingredients-body"><tr><td colspan="3" class="empty-state">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="recipes-card">
+    <h2>Recipes</h2>
+    <p class="empty-state">Link a dish name (matched against what you type into a menu entry's items,
+      case-insensitively) to the ingredients it needs — this is what lets the purchase schedule below
+      generate itself from the menu calendar.</p>
+    <form id="recipe-form">
+      <div class="field">
+        <label for="recipe-dish-name">Dish name</label>
+        <input id="recipe-dish-name" type="text" required placeholder="e.g. Dal Rice — must match menu item spelling">
+      </div>
+      <div class="field">
+        <label>Ingredients</label>
+        <div id="recipe-ingredient-rows"></div>
+        <button type="button" class="secondary" id="btn-add-ingredient-row" style="margin-top:8px">+ Add ingredient</button>
+      </div>
+      <button type="submit">Save recipe</button>
+    </form>
+    <div class="table-wrap" style="margin-top:var(--space-3)">
+      <table id="recipes-table">
+        <thead><tr><th>Dish</th><th>Ingredients</th><th></th></tr></thead>
+        <tbody id="recipes-body"><tr><td colspan="3" class="empty-state">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Purchase schedule</h2>
+    <p class="empty-state">Generated automatically from the menu calendar and each dish's recipe. Check
+      an item off once it's bought — anyone with counter access can update this, not just admin.</p>
+
+    <div class="form-row" id="generate-schedule-row">
+      <div class="field">
+        <label for="generate-start">From</label>
+        <input id="generate-start" type="date">
+      </div>
+      <div class="field">
+        <label for="generate-end">To</label>
+        <input id="generate-end" type="date">
+      </div>
+      <div class="field">
+        <button type="button" id="btn-generate-schedule">Generate for this range</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="manual-item-date">Add manually — date</label>
+        <input id="manual-item-date" type="date">
+      </div>
+      <div class="field">
+        <label for="manual-item-ingredient">Ingredient</label>
+        <select id="manual-item-ingredient"></select>
+      </div>
+      <div class="field">
+        <label for="manual-item-note">Quantity note</label>
+        <input id="manual-item-note" type="text" placeholder="e.g. 5kg">
+      </div>
+      <div class="field">
+        <button type="button" id="btn-add-manual-item">Add</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="schedule-table">
+        <thead><tr><th>Purchased</th><th>Date</th><th>Ingredient</th><th>Quantity</th><th>Source</th><th></th></tr></thead>
+        <tbody id="schedule-body"><tr><td colspan="6" class="empty-state">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/ingredients.js"></script>
+</body>
+</html>
