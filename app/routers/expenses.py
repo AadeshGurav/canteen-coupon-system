@@ -1,6 +1,5 @@
 import logging
 from datetime import date, datetime
-from typing import Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -36,7 +35,7 @@ async def add_expense(payload: ExpenseCreate):
 
 
 @router.get("")
-async def list_expenses(start: Optional[date] = None, end: Optional[date] = None):
+async def list_expenses(start: date | None = None, end: date | None = None):
     query = {}
     if start or end:
         query["date"] = {}
@@ -51,7 +50,7 @@ async def list_expenses(start: Optional[date] = None, end: Optional[date] = None
 
 
 @router.get("/summary")
-async def profit_summary(start: Optional[date] = None, end: Optional[date] = None):
+async def profit_summary(start: date | None = None, end: date | None = None):
     """Simple revenue (confirmed topups) vs expense summary for a date range."""
     topup_query = {"payment_status": "confirmed"}
     expense_query = {}

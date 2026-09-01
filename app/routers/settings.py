@@ -1,5 +1,5 @@
 import logging
-from typing import Literal, Optional
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -21,12 +21,12 @@ class MealWindow(BaseModel):
 
 
 class SettingsUpdate(BaseModel):
-    grace_allowance_enabled: Optional[bool] = None
-    grace_allowance_units: Optional[int] = Field(default=None, ge=0)
-    reversal_window_minutes: Optional[int] = Field(default=None, ge=0)
+    grace_allowance_enabled: bool | None = None
+    grace_allowance_units: int | None = Field(default=None, ge=0)
+    reversal_window_minutes: int | None = Field(default=None, ge=0)
     # Partial updates supported: only include the meal(s) you want to change,
     # e.g. {"meal_windows": {"lunch": {"start": "12:30", "end": "14:00"}}}
-    meal_windows: Optional[dict[Literal["breakfast", "lunch", "brunch"], MealWindow]] = None
+    meal_windows: dict[Literal["breakfast", "lunch", "brunch"], MealWindow] | None = None
 
 
 @router.get("")

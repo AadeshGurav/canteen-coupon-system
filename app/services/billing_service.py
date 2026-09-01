@@ -46,7 +46,7 @@ def generate_bill_pdf(
     path = os.path.join(settings.bills_output_dir, f"bill_{topup_id}.pdf")
 
     c = canvas.Canvas(path, pagesize=A5)
-    width, height = A5
+    _, height = A5
 
     y = height - 40
     c.setFont("Helvetica-Bold", 14)
