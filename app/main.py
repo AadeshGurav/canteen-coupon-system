@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pymongo.errors import OperationFailure
 
 from app.core.config import settings
 from app.core.database import ensure_indexes, get_global_settings
@@ -33,7 +34,32 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await ensure_indexes()
+    try:
+        await ensure_indexes()
+    except OperationFailure as exc:
+        if exc.code == 18:  # AuthenticationFailed
+            # The single most common deploy-time failure, and the raw
+            # pymongo traceback gives no hint what's actually wrong: Mongo
+            # only applies MONGO_INITDB_ROOT_PASSWORD the FIRST time its
+            # data directory is initialized, so editing MONGO_ROOT_PASSWORD
+            # in .env after the stack has ever run once does nothing to the
+            # password already stored in the mongo_data volume — every boot
+            # after that fails here. Surfacing this by name (PRD §7:
+            # "clear, specific errors", not a generic failure) turns a
+            # confusing crash into a one-line fix.
+            print(
+                "FATAL: MongoDB authentication failed. This almost always means "
+                "MONGO_ROOT_PASSWORD in .env doesn't match the password already "
+                "stored in the mongo_data volume from an earlier run — Mongo only "
+                "applies MONGO_INITDB_ROOT_PASSWORD the first time its data "
+                "directory is initialized, so changing .env afterward doesn't "
+                "change what's already stored. Fix: either restore the "
+                "MONGO_ROOT_PASSWORD this volume was first created with, or, if "
+                "this data can be discarded, run `docker compose down -v` to wipe "
+                "the volume and reinitialize cleanly with the current .env.",
+                flush=True,
+            )
+        raise
     await get_global_settings()
     await bootstrap_initial_admin()
     logger.info("startup_complete app_name=%s", settings.app_name)

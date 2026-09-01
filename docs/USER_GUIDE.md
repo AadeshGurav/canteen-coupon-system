@@ -282,6 +282,21 @@ settings change is logged there with enough detail to diagnose without
 reproducing the issue, and any unexpected server error is logged there with
 full detail even though the browser only shows a generic message.
 
+### The dashboard/scanner won't load — `docker compose up` says the app container is unhealthy
+
+Run `docker compose logs app --tail 60`. If you see
+`Authentication failed` (or the app itself prints `FATAL: MongoDB
+authentication failed`), the password in `.env`'s `MONGO_ROOT_PASSWORD`
+doesn't match the one already stored inside the database — this happens if
+that value was changed *after* the stack had already run once before,
+since MongoDB only applies it the very first time. Two ways out:
+- Put `.env`'s `MONGO_ROOT_PASSWORD` back to whatever it was the first time
+  this deployment ever came up, or
+- If there's no real data on this machine yet worth keeping, run
+  `docker compose down -v` (this deletes the database and generated files)
+  and then bring it back up — it'll reinitialize cleanly against
+  whatever's in `.env` now.
+
 `(This section is meant to keep growing from real issues hit during the
 pilot. When something breaks, add what happened and how it was fixed here.)`
 

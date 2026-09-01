@@ -232,13 +232,26 @@ FastAPI service, run under gunicorn) → **mongo** — wired together by
 make up          # copies .env.example -> .env on first run, then builds + starts everything
 ```
 
-Before deploying for real, open `.env` and set a real `MONGO_ROOT_PASSWORD`
+**Before the first `make up`**, open `.env` and set a real `MONGO_ROOT_PASSWORD`
 (`openssl rand -base64 24` is a good way to generate one) and `HTTP_PORT` if
 80 is already taken on the host. Everything else has a sane default. Once
 it's up, open the Settings page in the admin dashboard and set the
 canteen's timezone (e.g. `Asia/Kolkata`) and UPI details — left at the
 default `UTC` timezone, meal windows will be checked against UTC time
 instead of the canteen's own clock.
+
+> **Change `MONGO_ROOT_PASSWORD` only before the stack has ever run.**
+> MongoDB applies `MONGO_INITDB_ROOT_PASSWORD` (from `MONGO_ROOT_PASSWORD`)
+> only the *first* time its data directory (the `mongo_data` volume) is
+> initialized — editing it in `.env` after that point changes nothing about
+> what's already stored, and every subsequent boot fails with
+> `app-1 is unhealthy` / `pymongo.errors.OperationFailure: Authentication
+> failed` in `docker compose logs app`. The app now detects this specific
+> failure and prints a plain-English explanation instead of a raw
+> traceback. If you hit it: either restore the password the volume was
+> first created with, or — if there's no real data to lose yet — run
+> `docker compose down -v` to wipe the volume and reinitialize cleanly
+> against the current `.env`.
 
 ```bash
 make logs         # follow logs from all three containers
