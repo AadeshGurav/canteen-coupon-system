@@ -34,6 +34,9 @@ async function loadSettings() {
     document.getElementById("grace-enabled").checked = settings.grace_allowance_enabled;
     document.getElementById("grace-units").value = settings.grace_allowance_units;
     document.getElementById("reversal-window").value = settings.reversal_window_minutes;
+    document.getElementById("local-timezone").value = settings.local_timezone;
+    document.getElementById("upi-id").value = settings.upi_id;
+    document.getElementById("upi-payee-name").value = settings.upi_payee_name;
     renderMealWindowFields(settings.meal_windows);
   } catch (err) {
     showToast(`Could not load settings: ${err.message}`, true);
@@ -58,6 +61,9 @@ document.getElementById("settings-form").addEventListener("submit", async (e) =>
       grace_allowance_enabled: document.getElementById("grace-enabled").checked,
       grace_allowance_units: Number(document.getElementById("grace-units").value) || 0,
       reversal_window_minutes: Number(document.getElementById("reversal-window").value) || 0,
+      local_timezone: document.getElementById("local-timezone").value.trim() || "UTC",
+      upi_id: document.getElementById("upi-id").value.trim(),
+      upi_payee_name: document.getElementById("upi-payee-name").value.trim(),
       meal_windows,
     });
     showToast("Settings saved.");
