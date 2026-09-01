@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 class MenuCategoryCreate(BaseModel):
-    name: str          # e.g. "Jain", "Normal", "Staff"
+    name: str  # e.g. "Jain", "Normal", "Staff"
     description: Optional[str] = None
 
 

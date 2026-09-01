@@ -15,8 +15,8 @@ def generate_upi_qr(amount: float, note: str, topup_id: str) -> str | None:
         return None
 
     params = {
-        "pa": settings.upi_id,           # payee address
-        "pn": settings.upi_payee_name,   # payee name
+        "pa": settings.upi_id,  # payee address
+        "pn": settings.upi_payee_name,  # payee name
         "am": f"{amount:.2f}",
         "cu": "INR",
         "tn": note,
@@ -74,7 +74,8 @@ def generate_bill_pdf(
     y -= 15
     c.setFont("Helvetica", 10)
     c.drawString(
-        40, y,
+        40,
+        y,
         f"Lunch: {new_balances.get('lunch', 0)}   "
         f"Breakfast: {new_balances.get('breakfast', 0)}   "
         f"Brunch: {new_balances.get('brunch', 0)}",

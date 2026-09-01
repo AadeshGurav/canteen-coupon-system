@@ -54,5 +54,7 @@ async def get_global_settings() -> dict:
             "lunch": {"start": "12:00", "end": "14:30"},
             "brunch": {"start": "09:00", "end": "12:00"},
         }
-        await settings_collection.update_one({"_id": "global"}, {"$set": {"meal_windows": doc["meal_windows"]}})
+        await settings_collection.update_one(
+            {"_id": "global"}, {"$set": {"meal_windows": doc["meal_windows"]}}
+        )
     return doc
