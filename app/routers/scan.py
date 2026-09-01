@@ -1,5 +1,8 @@
+from typing import Optional
+
 from fastapi import APIRouter
 
+from app.core.database import scans
 from app.schemas.scan import ScanRequest, ScanResult, ReversalRequest
 from app.services.scan_service import process_scan, reverse_scan
 
@@ -17,3 +20,14 @@ async def scan(payload: ScanRequest):
 async def reverse(payload: ReversalRequest):
     """Undo a mistaken scan within the configured reversal window (default 10 min)."""
     return await reverse_scan(payload.scan_id, payload.reversed_by)
+
+
+@router.get("")
+async def list_scans(member_id: Optional[str] = None, limit: int = 200):
+    """Recent scan history, most recent first — backs the admin's scan log/audit
+    view and lets the admin find a scan_id to reverse."""
+    query = {"member_id": member_id} if member_id else {}
+    docs = await scans.find(query).sort("scanned_at", -1).to_list(length=min(limit, 1000))
+    for d in docs:
+        d["_id"] = str(d["_id"])
+    return docs
