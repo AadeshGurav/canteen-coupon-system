@@ -4,15 +4,19 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
 
+from app.core.config import settings
 from app.core.database import get_global_settings, member_entities, scans
 from app.schemas.scan import ScanResult
-from app.utils.meal_window import current_meal_type, day_bounds
+from app.utils.meal_window import current_meal_type, day_bounds, to_local
 
 logger = logging.getLogger(__name__)
 
 
 async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -> ScanResult:
-    now = datetime.now(timezone.utc)
+    # Stored timestamps stay UTC; meal-window/day-of-week resolution needs
+    # the canteen's own local wall-clock time (see to_local()'s docstring).
+    now_utc = datetime.now(timezone.utc)
+    now_local = to_local(now_utc, settings.local_timezone)
     global_settings = await get_global_settings()
 
     member = await member_entities.find_one({"qr_code_id": qr_code_id})
@@ -29,7 +33,7 @@ async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -
             message="This member's account is inactive.",
         )
 
-    meal_type = meal_type_override or current_meal_type(now, global_settings["meal_windows"])
+    meal_type = meal_type_override or current_meal_type(now_local, global_settings["meal_windows"])
     if meal_type is None:
         logger.info("scan.rejected reason=no_meal_window member_id=%s", member["_id"])
         return ScanResult(
@@ -40,7 +44,7 @@ async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -
         )
 
     # One-scan-per-meal-window lock — day-scoped, see day_bounds() for why.
-    day_start, day_end = day_bounds(now)
+    day_start, day_end = day_bounds(now_local)
     already_scanned = await scans.find_one(
         {
             "member_id": str(member["_id"]),
@@ -90,13 +94,13 @@ async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -
     used_grace = new_balance < 0  # meal was only possible because of the grace allowance
     await member_entities.update_one(
         {"_id": member["_id"]},
-        {"$set": {f"balances.{meal_type}": new_balance, "updated_at": now}},
+        {"$set": {f"balances.{meal_type}": new_balance, "updated_at": now_utc}},
     )
     await scans.insert_one(
         {
             "member_id": str(member["_id"]),
             "meal_type": meal_type,
-            "scanned_at": now,
+            "scanned_at": now_utc,
             "result": "accepted",
             "via_grace": used_grace,
             "reversed": False,

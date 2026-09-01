@@ -1,4 +1,14 @@
 from datetime import datetime, time
+from zoneinfo import ZoneInfo
+
+
+def to_local(dt: datetime, tz_name: str) -> datetime:
+    """Convert an aware UTC datetime to the canteen's configured local
+    timezone. Meal windows and "today" are meant in local wall-clock time —
+    an admin typing "07:00" means 7am at the canteen, not 7am UTC — so
+    current_meal_type() and day_bounds() below must be given local time,
+    not the raw UTC "now" (see app/core/config.py's local_timezone note)."""
+    return dt.astimezone(ZoneInfo(tz_name))
 
 
 def _parse_hhmm(s: str) -> time:
