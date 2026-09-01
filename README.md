@@ -44,7 +44,7 @@ once they see the money land in their own account.
 
 | Area | What's included |
 |---|---|
-| Member management | Full CRUD for student & staff entities, bulk-friendly for paper-to-digital migration |
+| Member management | Full CRUD for student & staff entities, plus `POST /members/bulk` for paper-to-digital migration (each row succeeds/fails independently) |
 | QR codes | Generate on creation, print, reprint (same code, never duplicated) |
 | Scanning | Single shared scanner page (phone browser), instant accept/reject, one scan per meal window |
 | Balances | Separate lunch / breakfast / brunch unit counts, grace allowance (global + per-member override), **no automatic resets ever** — only scans, reversals, top-ups, and refunds change a balance |
@@ -77,10 +77,10 @@ a single `uvicorn` process with zero tooling beyond a browser.
 
 ```
 app/
-  core/       — config (env vars) and MongoDB connection/index setup
+  core/       — config (env vars), MongoDB connection/index setup, logging setup
   schemas/    — Pydantic request/response models
   services/   — core business logic
-    scan_service.py     — meal window detection, one-scan-per-window lock,
+    scan_service.py     — meal window detection, one-scan-per-day lock,
                            grace allowance check, balance deduction, reversal
     qr_service.py        — permanent, reprintable QR code generation
     billing_service.py   — UPI QR (upi://pay URI) + PDF bill generation
@@ -88,12 +88,18 @@ app/
   utils/
     meal_window.py       — resolves current meal type from DB-backed settings,
                             handles the Saturday-brunch-only rule
+    object_id.py          — shared "parse this string as a Mongo id or 400" helper
 static/
   scanner.html — counter-facing scanner page (plain JS, no framework)
   admin/       — admin dashboard: member CRUD, top-ups/billing, scan log &
                  reversal, menu planning, expenses, refunds, settings — one
                  plain HTML page per area, sharing css/admin.css and
                  js/api.js + js/nav.js (no build step, no framework)
+tests/
+  test_meal_window.py  — meal/window resolution, pure-function unit tests
+  test_scan_service.py — the accept/reject/reversal decision tree, against
+                          in-memory fake collections (tests/fakes.py) — no
+                          MongoDB needed to run these
 docs/
   PRD.md         — full product requirements (read this before building features)
   USER_GUIDE.md  — day-to-day usage doc for the admin/counter operator
@@ -120,15 +126,40 @@ And for the admin, on any device on the local network:
 
 Interactive API docs: `http://<host>:8000/docs`
 
+### Running tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Tests run entirely against in-memory fakes (`tests/fakes.py`) — no MongoDB
+required. Coverage focuses on `app/services/scan_service.py` and
+`app/utils/meal_window.py`, since the PRD calls the scan accept/reject flow
+"the highest-frequency, highest-stakes part of the system."
+
+### Logging
+
+Every scan decision, top-up, refund, member change, and settings update is
+logged to both the console and a rotating file at `<LOGS_DIR>/app.log`
+(default `logs/app.log`, 5MB × 5 files). Any unhandled exception is caught,
+logged with a full traceback, and turned into a clean generic error for the
+client — this is meant to be the admin's primary debugging tool when
+something goes wrong and the developer isn't the one looking at it (see
+`docs/PRD.md` §7).
+
 ### Key design decisions
 
 - **Meal windows are configurable, not hardcoded.** Breakfast/lunch/brunch start
   and end times live in the `settings` document in MongoDB
   (`app/core/database.py::get_global_settings`) and are editable via
   `PATCH /settings` — never edit source to change serving hours.
-- **One scan per meal window**, enforced by checking for an existing non-reversed
-  accepted scan within the current window's time bounds, not a fixed cooldown
-  timer — so it naturally resets each day with no scheduled job needed.
+- **One scan per meal per day**, enforced by checking for an existing
+  non-reversed accepted scan for that member/meal within the calendar day —
+  not a fixed cooldown timer, so it naturally resets each day with no
+  scheduled job needed, and not the meal's configured clock window, so a
+  counter operator's `meal_type_override` (for edge cases) can't accidentally
+  defeat the lock by falling outside that window's normal hours.
 - **Grace allowance**: global default in `settings`, with an optional per-member
   override (`grace_allowance_override`) for exceptions.
 - **QR codes never change.** `qr_code_id` is generated once at member creation

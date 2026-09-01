@@ -63,6 +63,13 @@ at the scanner with a clear "account inactive" message instead of a generic
 error. Click **Activate** to reverse this at any time — deactivating does not
 touch their balances.
 
+### 3.6 Migrating existing paper records in bulk
+For a one-time migration from paper records, `POST /members/bulk` (via
+`/docs`, or ask your developer to run a script against it) accepts a list of
+members in one request. Each row is created independently — one bad row in
+a large batch doesn't fail the rest — and the response lists which rows
+succeeded and which failed, with why.
+
 ## 4. Admin: topping up balances & billing
 
 ### 4.1 Adding lunch / breakfast / brunch units
@@ -161,8 +168,14 @@ leaving for good, also deactivate them (§3.5).
 
 ## 11. Troubleshooting
 
-`(TODO — this section is meant to grow from real issues hit during the pilot.
-When something breaks, add what happened and how it was fixed here.)`
+If something breaks or behaves unexpectedly, check `logs/app.log` on the
+host machine first — every scan decision, top-up, refund, member change, and
+settings change is logged there with enough detail to diagnose without
+reproducing the issue, and any unexpected server error is logged there with
+full detail even though the browser only shows a generic message.
+
+`(This section is meant to keep growing from real issues hit during the
+pilot. When something breaks, add what happened and how it was fixed here.)`
 
 ---
 
