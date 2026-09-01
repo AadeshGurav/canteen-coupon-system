@@ -67,6 +67,7 @@ async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -
 
     # Accept: deduct unit and log the scan
     new_balance = balance - 1
+    used_grace = new_balance < 0  # meal was only possible because of the grace allowance
     await member_entities.update_one(
         {"_id": member["_id"]},
         {"$set": {f"balances.{meal_type}": new_balance, "updated_at": now}},
@@ -76,18 +77,21 @@ async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -
         "meal_type": meal_type,
         "scanned_at": now,
         "result": "accepted",
+        "via_grace": used_grace,
         "reversed": False,
         "reversed_at": None,
         "reversed_by": None,
     })
 
+    grace_note = " (via grace allowance)" if used_grace else ""
     return ScanResult(
         result="accepted",
         member_name=member["name"],
         member_type=member["type"],
         meal_type=meal_type,
         remaining_balance=new_balance,
-        message=f"Confirmed — {member['name']} ({meal_type}). {new_balance} remaining.",
+        via_grace=used_grace,
+        message=f"Confirmed — {member['name']} ({meal_type}){grace_note}. {new_balance} remaining.",
     )
 
 

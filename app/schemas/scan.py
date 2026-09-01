@@ -17,6 +17,7 @@ class ScanResult(BaseModel):
     member_type: Optional[str] = None
     meal_type: Optional[str] = None
     remaining_balance: Optional[int] = None
+    via_grace: bool = False  # true if this meal was only possible because of the grace allowance
     message: str
 
 
@@ -26,6 +27,7 @@ class ScanOut(BaseModel):
     meal_type: str
     scanned_at: datetime
     result: str
+    via_grace: bool = False
     reversed: bool = False
     reversed_at: Optional[datetime] = None
 
