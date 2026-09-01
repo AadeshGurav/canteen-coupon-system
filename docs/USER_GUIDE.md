@@ -149,7 +149,9 @@ at any time without needing a developer — changes take effect immediately,
 no restart required:
 
 - **Meal windows** — the start/end time for breakfast, lunch, and Saturday
-  brunch.
+  brunch, in the canteen's own local time (make sure `LOCAL_TIMEZONE` in the
+  server's environment is set correctly for your location — see the README —
+  or these times will be checked against UTC instead).
 - **Grace allowance** — whether members can go negative on a balance, and by
   how many units, before being turned away. Enable/disable it and set the
   default unit count here; set a per-member exception on that member's row
