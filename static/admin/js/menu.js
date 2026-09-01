@@ -1,6 +1,25 @@
-// Menu category CRUD and menu log entries for the admin dashboard.
+// Menu planning: a month calendar as the primary view (item 8), plus the
+// category CRUD that feeds it. Clicking any day opens a dialog to log an
+// entry for that date and review what's already logged there.
 
 let categories = [];
+let entriesByDate = {}; // "YYYY-MM-DD" -> array of entries
+let calendarMonth = new Date(); // any date within the month currently shown
+
+const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", brunch: "Brunch" };
+
+function dateKey(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// --- Categories ---
 
 async function loadCategories() {
   try {
@@ -68,37 +87,141 @@ document.getElementById("categories-list").addEventListener("click", async (e) =
   }
 });
 
-// --- Menu log ---
+// --- Calendar ---
 
-document.getElementById("menu-date").valueAsDate = new Date();
+function renderWeekdayHeader() {
+  const container = document.getElementById("calendar-weekdays");
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  container.innerHTML = weekdays.map((w) => `<div class="calendar-weekday">${w}</div>`).join("");
+}
 
-async function loadMenuLog() {
-  const body = document.getElementById("menu-body");
+async function loadEntriesForMonth() {
+  const start = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+  const end = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+  entriesByDate = {};
   try {
-    const entries = await api.get("/menu");
-    if (entries.length === 0) {
-      body.innerHTML = `<tr><td colspan="5" class="empty-state">No menu entries logged yet.</td></tr>`;
-      return;
+    const entries = await api.get(`/menu?start=${dateKey(start)}&end=${dateKey(end)}`);
+    for (const entry of entries) {
+      const key = entry.date.slice(0, 10);
+      (entriesByDate[key] ||= []).push(entry);
     }
-    body.innerHTML = entries.slice().reverse().map((entry) => `
-      <tr>
-        <td>${new Date(entry.date).toLocaleDateString()}</td>
-        <td>${entry.meal_type}</td>
-        <td>${entry.categories.map(escapeHtml).join(", ")}</td>
-        <td>${entry.items.map(escapeHtml).join(", ")}</td>
-        <td><button class="secondary btn-delete-entry" data-id="${entry._id}">Delete</button></td>
-      </tr>`).join("");
   } catch (err) {
-    body.innerHTML = `<tr><td colspan="5" class="empty-state">Could not load menu log: ${escapeHtml(err.message)}</td></tr>`;
+    showToast(`Could not load menu entries: ${err.message}`, true);
   }
 }
 
-document.getElementById("menu-body").addEventListener("click", async (e) => {
+function renderCalendarGrid() {
+  const label = document.getElementById("calendar-month-label");
+  label.textContent = calendarMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const grid = document.getElementById("calendar-grid");
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const startOffset = firstOfMonth.getDay(); // Sunday-first grid
+  const gridStart = new Date(year, month, 1 - startOffset);
+  const today = new Date();
+
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+    const key = dateKey(cellDate);
+    const entries = entriesByDate[key] || [];
+    const classes = ["calendar-day"];
+    if (cellDate.getMonth() !== month) classes.push("is-outside-month");
+    if (isSameDay(cellDate, today)) classes.push("is-today");
+
+    const entryTags = entries
+      .map((e) => `<div class="day-entry">${MEAL_LABELS[e.meal_type] || e.meal_type}: ${escapeHtml(e.items.join(", "))}</div>`)
+      .join("");
+
+    cells.push(`
+      <div class="${classes.join(" ")}" data-date="${key}" role="button" tabindex="0">
+        <div class="day-number">${cellDate.getDate()}</div>
+        ${entryTags}
+      </div>`);
+  }
+  grid.innerHTML = cells.join("");
+}
+
+async function refreshCalendar() {
+  await loadEntriesForMonth();
+  renderCalendarGrid();
+}
+
+document.getElementById("btn-prev-month").addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+  refreshCalendar();
+});
+
+document.getElementById("btn-next-month").addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+  refreshCalendar();
+});
+
+document.getElementById("calendar-grid").addEventListener("click", (e) => {
+  const cell = e.target.closest(".calendar-day");
+  if (cell) openMenuDialog(cell.dataset.date);
+});
+
+document.getElementById("calendar-grid").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const cell = e.target.closest(".calendar-day");
+  if (cell) {
+    e.preventDefault();
+    openMenuDialog(cell.dataset.date);
+  }
+});
+
+document.getElementById("btn-add-entry").addEventListener("click", () => openMenuDialog(dateKey(new Date())));
+
+// --- Log-entry dialog ---
+
+const menuDialog = document.getElementById("menu-dialog");
+
+function renderExistingEntriesForDialog(key) {
+  const container = document.getElementById("menu-dialog-existing");
+  const entries = entriesByDate[key] || [];
+  if (entries.length === 0) {
+    container.innerHTML = '<p class="empty-state">Nothing logged yet for this day.</p>';
+    return;
+  }
+  container.innerHTML = `
+    <table>
+      <thead><tr><th>Meal</th><th>Categories</th><th>Items</th><th></th></tr></thead>
+      <tbody>
+        ${entries.map((e) => `
+          <tr>
+            <td>${MEAL_LABELS[e.meal_type] || e.meal_type}</td>
+            <td>${e.categories.map(escapeHtml).join(", ")}</td>
+            <td>${e.items.map(escapeHtml).join(", ")}</td>
+            <td><button type="button" class="secondary btn-delete-entry" data-id="${e._id}">Delete</button></td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+}
+
+function openMenuDialog(key) {
+  document.getElementById("menu-entry-date").value = key;
+  const label = new Date(`${key}T00:00:00`).toLocaleDateString(undefined, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  document.getElementById("menu-dialog-date-label").textContent = label;
+  document.getElementById("menu-items").value = "";
+  document.querySelectorAll(".menu-category-checkbox").forEach((c) => (c.checked = false));
+  renderExistingEntriesForDialog(key);
+  menuDialog.showModal();
+}
+
+document.getElementById("btn-close-menu-dialog").addEventListener("click", () => menuDialog.close());
+
+document.getElementById("menu-dialog-existing").addEventListener("click", async (e) => {
   if (!e.target.classList.contains("btn-delete-entry")) return;
   try {
     await api.delete(`/menu/${e.target.dataset.id}`);
     showToast("Menu entry removed.");
-    loadMenuLog();
+    await refreshCalendar();
+    renderExistingEntriesForDialog(document.getElementById("menu-entry-date").value);
   } catch (err) {
     showToast(err.message, true);
   }
@@ -112,10 +235,11 @@ document.getElementById("menu-form").addEventListener("submit", async (e) => {
     return;
   }
   const items = document.getElementById("menu-items").value.split(",").map((i) => i.trim()).filter(Boolean);
+  const key = document.getElementById("menu-entry-date").value;
 
   try {
     await api.post("/menu", {
-      date: document.getElementById("menu-date").value,
+      date: key,
       meal_type: document.getElementById("menu-meal-type").value,
       categories: selectedCategories,
       items,
@@ -124,13 +248,17 @@ document.getElementById("menu-form").addEventListener("submit", async (e) => {
     showToast("Menu entry logged.");
     document.getElementById("menu-items").value = "";
     document.querySelectorAll(".menu-category-checkbox").forEach((c) => (c.checked = false));
-    loadMenuLog();
+    await refreshCalendar();
+    renderExistingEntriesForDialog(key);
   } catch (err) {
     showToast(err.message, true);
   }
 });
 
 (async function init() {
+  const auth = getAuth();
+  document.getElementById("menu-created-by").value = auth?.username || "";
+  renderWeekdayHeader();
   await loadCategories();
-  await loadMenuLog();
+  await refreshCalendar();
 })();

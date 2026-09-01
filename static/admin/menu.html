@@ -12,8 +12,22 @@
   <h1>Menu Planning</h1>
 
   <section class="card">
+    <div class="actions" style="justify-content:space-between;margin-bottom:var(--space-2)">
+      <div class="actions">
+        <button type="button" class="secondary" id="btn-prev-month">&larr; Prev</button>
+        <h2 id="calendar-month-label" style="margin:0;min-width:180px;text-align:center">Month</h2>
+        <button type="button" class="secondary" id="btn-next-month">Next &rarr;</button>
+      </div>
+      <button type="button" id="btn-add-entry">+ Log an entry</button>
+    </div>
+    <div class="calendar-grid" id="calendar-weekdays"></div>
+    <div class="calendar-grid" id="calendar-grid" style="margin-top:6px"></div>
+    <p class="empty-state">Click any day to log or review what's planned for it.</p>
+  </section>
+
+  <section class="card">
     <h2>Menu categories</h2>
-    <p class="empty-state">Admin-managed tags (e.g. Jain, Normal, Staff) used to label menu entries below.</p>
+    <p class="empty-state">Admin-managed tags (e.g. Jain, Normal, Staff) used to label menu entries.</p>
     <div class="form-row">
       <div class="field">
         <label for="category-name">New category name</label>
@@ -29,54 +43,46 @@
     </div>
     <div id="categories-list" class="actions"></div>
   </section>
-
-  <section class="card">
-    <h2>Log today's menu</h2>
-    <form id="menu-form">
-      <div class="grid grid-2">
-        <div class="field">
-          <label for="menu-date">Date</label>
-          <input id="menu-date" type="date" required>
-        </div>
-        <div class="field">
-          <label for="menu-meal-type">Meal</label>
-          <select id="menu-meal-type" required>
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
-            <option value="brunch">Brunch (Saturday)</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Categories</label>
-        <div id="menu-categories-checkboxes" class="actions"></div>
-      </div>
-      <div class="field">
-        <label for="menu-items">Items (comma-separated)</label>
-        <input id="menu-items" type="text" placeholder="e.g. Dal, Rice, Roti, Sabzi" required>
-      </div>
-      <div class="field">
-        <label for="menu-created-by">Logged by</label>
-        <input id="menu-created-by" type="text" required placeholder="Your name">
-      </div>
-      <button type="submit">Log menu entry</button>
-    </form>
-  </section>
-
-  <section class="card">
-    <h2>Recent menu log</h2>
-    <div class="table-wrap">
-      <table id="menu-table">
-        <thead>
-          <tr><th>Date</th><th>Meal</th><th>Categories</th><th>Items</th><th></th></tr>
-        </thead>
-        <tbody id="menu-body">
-          <tr><td colspan="5" class="empty-state">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
 </main>
+
+<dialog id="menu-dialog">
+  <form class="card" id="menu-form">
+    <h2>Log a menu entry</h2>
+    <input type="hidden" id="menu-entry-date">
+    <p class="empty-state" id="menu-dialog-date-label"></p>
+
+    <div class="field">
+      <label for="menu-meal-type">Meal</label>
+      <select id="menu-meal-type" required>
+        <option value="breakfast">Breakfast</option>
+        <option value="lunch">Lunch</option>
+        <option value="brunch">Brunch (Saturday)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Categories</label>
+      <div id="menu-categories-checkboxes" class="actions"></div>
+    </div>
+    <div class="field">
+      <label for="menu-items">Items (comma-separated)</label>
+      <input id="menu-items" type="text" placeholder="e.g. Dal, Rice, Roti, Sabzi" required>
+    </div>
+    <div class="field">
+      <label for="menu-created-by">Logged by</label>
+      <input id="menu-created-by" type="text" required placeholder="Your name">
+    </div>
+
+    <div class="field">
+      <label>Already logged for this day</label>
+      <div id="menu-dialog-existing" class="table-wrap"></div>
+    </div>
+
+    <div class="actions">
+      <button type="submit">Log entry</button>
+      <button type="button" class="secondary" id="btn-close-menu-dialog">Close</button>
+    </div>
+  </form>
+</dialog>
 
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
