@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +23,16 @@ from app.routers import settings as settings_router
 configure_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await ensure_indexes()
+    await get_global_settings()
+    logger.info("startup_complete app_name=%s", settings.app_name)
+    yield
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Local network only — this stays wide open on CORS since every client
@@ -51,13 +61,6 @@ async def log_unhandled_exception(request: Request, exc: Exception) -> JSONRespo
     without exposing internals to whoever's using the browser (see PRD §7/§8)."""
     logger.exception("unhandled_exception method=%s path=%s", request.method, request.url.path)
     return JSONResponse(status_code=500, content={"detail": "Something went wrong. Check the server logs."})
-
-
-@app.on_event("startup")
-async def on_startup():
-    await ensure_indexes()
-    await get_global_settings()
-    logger.info("startup_complete app_name=%s", settings.app_name)
 
 
 @app.get("/health")
