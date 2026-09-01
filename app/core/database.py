@@ -37,32 +37,36 @@ async def ensure_indexes():
     await expenses.create_index("date")
 
 
+_GLOBAL_SETTINGS_DEFAULTS = {
+    "grace_allowance_enabled": False,
+    "grace_allowance_units": 0,
+    "reversal_window_minutes": 10,
+    "meal_windows": {
+        "breakfast": {"start": "07:00", "end": "09:30"},
+        "lunch": {"start": "12:00", "end": "14:30"},
+        "brunch": {"start": "09:00", "end": "12:00"},  # Saturday only
+    },
+    # Admin-editable via PATCH /settings, not an env var — see
+    # app/routers/settings.py's SettingsUpdate for why.
+    "local_timezone": "UTC",
+    "upi_id": "",
+    "upi_payee_name": "",
+}
+
+
 async def get_global_settings() -> dict:
-    """Fetch the single global settings document, creating sane defaults if missing.
-    Meal windows are stored here (as HH:MM strings) so they're editable from the
-    admin settings screen without touching code."""
+    """Fetch the single global settings document, creating sane defaults if
+    missing and backfilling any field added to this document after a given
+    deployment's copy was first created — no manual migration needed when
+    a new setting like local_timezone ships."""
     doc = await settings_collection.find_one({"_id": "global"})
     if doc is None:
-        doc = {
-            "_id": "global",
-            "grace_allowance_enabled": False,
-            "grace_allowance_units": 0,
-            "reversal_window_minutes": 10,
-            "meal_windows": {
-                "breakfast": {"start": "07:00", "end": "09:30"},
-                "lunch": {"start": "12:00", "end": "14:30"},
-                "brunch": {"start": "09:00", "end": "12:00"},  # Saturday only
-            },
-        }
+        doc = {"_id": "global", **_GLOBAL_SETTINGS_DEFAULTS}
         await settings_collection.insert_one(doc)
-    elif "meal_windows" not in doc:
-        # backfill for docs created before this field existed
-        doc["meal_windows"] = {
-            "breakfast": {"start": "07:00", "end": "09:30"},
-            "lunch": {"start": "12:00", "end": "14:30"},
-            "brunch": {"start": "09:00", "end": "12:00"},
-        }
-        await settings_collection.update_one(
-            {"_id": "global"}, {"$set": {"meal_windows": doc["meal_windows"]}}
-        )
+        return doc
+
+    missing = {key: value for key, value in _GLOBAL_SETTINGS_DEFAULTS.items() if key not in doc}
+    if missing:
+        doc.update(missing)
+        await settings_collection.update_one({"_id": "global"}, {"$set": missing})
     return doc

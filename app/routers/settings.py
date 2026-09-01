@@ -1,8 +1,9 @@
 import logging
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.database import get_global_settings, settings_collection
 
@@ -27,6 +28,27 @@ class SettingsUpdate(BaseModel):
     # Partial updates supported: only include the meal(s) you want to change,
     # e.g. {"meal_windows": {"lunch": {"start": "12:30", "end": "14:00"}}}
     meal_windows: dict[Literal["breakfast", "lunch", "brunch"], MealWindow] | None = None
+    # The canteen's own IANA timezone (e.g. "Asia/Kolkata") — meal windows
+    # above are this zone's local wall-clock hours, not UTC. Admin-editable
+    # here rather than an env var, same as everything else on this page —
+    # it can change if the canteen itself ever does.
+    local_timezone: str | None = None
+    # UPI ID/payee name for the payment QR on a top-up bill (see
+    # app/services/billing_service.py). Blank upi_id means "no UPI QR" —
+    # cash-only setups don't need either set.
+    upi_id: str | None = None
+    upi_payee_name: str | None = None
+
+    @field_validator("local_timezone")
+    @classmethod
+    def _validate_timezone(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError(f"'{value}' is not a valid IANA timezone name (e.g. 'Asia/Kolkata', 'UTC').")
+        return value
 
 
 @router.get("")
