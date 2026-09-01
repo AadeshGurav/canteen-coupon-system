@@ -10,6 +10,8 @@ member_entities = db["member_entities"]
 scans = db["scans"]
 topups = db["topups"]
 menu_log = db["menu_log"]
+menu_categories = db["menu_categories"]
+refunds = db["refunds"]
 expenses = db["expenses"]
 settings_collection = db["settings"]
 
@@ -22,6 +24,8 @@ async def ensure_indexes():
     await scans.create_index([("member_id", 1), ("meal_type", 1), ("scanned_at", -1)])
     await topups.create_index("member_id")
     await menu_log.create_index("date")
+    await menu_categories.create_index("name", unique=True)
+    await refunds.create_index("member_id")
     await expenses.create_index("date")
 
 
