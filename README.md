@@ -55,20 +55,23 @@ once they see the money land in their own account.
 | Refunds | Admin records a refund (units + amount + reason) when a member leaves; deducts the balance immediately, payout itself is handled outside the app |
 | Expenses | Log spend, see revenue vs. expense summary |
 | Settings | Meal windows, grace allowance, reversal window — all DB-backed, all editable at runtime |
+| Admin dashboard | Browser UI (`/static/admin/`) covering every admin action above — member CRUD, top-ups/billing, scan log & reversal, menu planning, expenses, refunds, settings — no more driving the API by hand through `/docs` |
 
 ---
 
 ## 3. Technical overview
 
 **Stack:** Python (FastAPI, async) · MongoDB (via Motor) · plain HTML/JS for the
-scanner page (no frontend framework) · ReportLab for PDF bills · `qrcode` for QR
-generation.
+scanner page and the admin dashboard (no frontend framework) · ReportLab for PDF
+bills · `qrcode` for QR generation.
 
 **Why this stack:** small single-canteen pilot, not a high-scale system — FastAPI
 gives free request validation and async support without Django-level scaffolding;
 MongoDB suits the somewhat variable shape of member records; the scanner page is
 deliberately framework-free since it needs to sit open on a phone browser for
-hours without memory bloat.
+hours without memory bloat. The admin dashboard follows the same no-framework,
+no-build-step approach for consistency and to keep the whole thing runnable from
+a single `uvicorn` process with zero tooling beyond a browser.
 
 ### Project layout
 
@@ -86,7 +89,11 @@ app/
     meal_window.py       — resolves current meal type from DB-backed settings,
                             handles the Saturday-brunch-only rule
 static/
-  scanner.html — counter-facing scanner page
+  scanner.html — counter-facing scanner page (plain JS, no framework)
+  admin/       — admin dashboard: member CRUD, top-ups/billing, scan log &
+                 reversal, menu planning, expenses, refunds, settings — one
+                 plain HTML page per area, sharing css/admin.css and
+                 js/api.js + js/nav.js (no build step, no framework)
 docs/
   PRD.md         — full product requirements (read this before building features)
   USER_GUIDE.md  — day-to-day usage doc for the admin/counter operator
@@ -107,6 +114,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 Then, on the counter phone (same local network), open:
 `http://<host-device-ip-or-dns-name>:8000/static/scanner.html`
+
+And for the admin, on any device on the local network:
+`http://<host-device-ip-or-dns-name>:8000/static/admin/index.html`
 
 Interactive API docs: `http://<host>:8000/docs`
 
