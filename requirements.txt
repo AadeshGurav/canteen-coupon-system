@@ -8,3 +8,4 @@ python-multipart==0.0.9
 qrcode[pil]==7.4.2
 reportlab==4.2.2
 python-dotenv==1.0.1
+gunicorn==23.0.0  # production process manager — runs uvicorn's ASGI worker under it
