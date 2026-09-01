@@ -4,4 +4,5 @@ __pycache__/
 venv/
 generated_bills/
 generated_qr/
+logs/
 .DS_Store
