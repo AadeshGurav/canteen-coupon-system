@@ -177,6 +177,26 @@ And for the admin, on any device on the local network:
 
 Interactive API docs: `http://<host>:8000/docs`
 
+### Optional: a friendly local hostname instead of an IP (mDNS)
+
+If this is hosted on a phone's Wi-Fi hotspot rather than a router, the
+host's IP — and on Android 11+, the *entire subnet* — can change every time
+the hotspot restarts, since it isn't configurable without rooting the
+phone. Rather than chasing that, `make mdns-setup` publishes this machine
+as `<hostname>.local` via mDNS (Avahi on Linux, Bonjour on macOS — nothing
+to install on macOS), so it stays reachable at the same name regardless of
+what IP DHCP hands out that day:
+
+```bash
+make mdns-setup            # asks before changing anything; supports --yes
+```
+
+Set `MDNS_HOSTNAME` in `.env` first if `canteen` isn't the name you want
+(defaults to `canteen` → `canteen.local`). This is entirely optional —
+`make up` alone is a complete setup — and only helps on devices that
+support mDNS resolution (macOS/iOS out of the box; Android 12+ natively;
+Windows needs Bonjour Print Services installed separately).
+
 ### Running tests
 
 ```bash
@@ -229,6 +249,10 @@ make down         # stop and remove containers (volumes/data are kept)
 Then, from any device on the local network:
 - Scanner: `http://<host>:<HTTP_PORT>/static/scanner.html`
 - Admin dashboard: `http://<host>:<HTTP_PORT>/static/admin/index.html`
+
+`<host>` can be a raw IP, or `<hostname>.local` if you've run
+`make mdns-setup` (see above) — useful when hosting off a phone hotspot,
+where the IP isn't stable without rooting the phone.
 
 #### Network topology
 
