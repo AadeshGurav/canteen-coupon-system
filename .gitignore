@@ -6,3 +6,10 @@ generated_bills/
 generated_qr/
 logs/
 .DS_Store
+
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+pytest-results.xml
+htmlcov/
