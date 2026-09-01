@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.12" # matches the Dockerfile's base image
+  PYTHON_VERSION: "3.14" # matches the Dockerfile's base image
 
 permissions:
   contents: read
