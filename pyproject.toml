@@ -1,0 +1,12 @@
+[tool.black]
+line-length = 110
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency injection relies on calling Depends()/Security() as
+# an argument default — the documented, idiomatic pattern, not the mutable-
+# default footgun B008 exists to catch. This is FastAPI's own recommended
+# ruff config for exactly this situation.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Security", "app.core.security.require_role"]

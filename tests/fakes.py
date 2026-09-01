@@ -34,6 +34,17 @@ class FakeCollection:
                 return _Result(matched_count=1)
         return _Result(matched_count=0)
 
+    async def delete_one(self, query: dict) -> _Result:
+        for doc_id, doc in list(self._docs.items()):
+            if _matches(doc, query):
+                del self._docs[doc_id]
+                return _Result(deleted_count=1)
+        return _Result(deleted_count=0)
+
+    async def count_documents(self, query: dict, limit: int | None = None) -> int:
+        count = sum(1 for doc in self._docs.values() if _matches(doc, query))
+        return min(count, limit) if limit is not None else count
+
 
 def _get_nested(doc: dict, dotted_key: str):
     value = doc

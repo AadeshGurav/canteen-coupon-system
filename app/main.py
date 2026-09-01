@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import ensure_indexes, get_global_settings
 from app.core.logging_config import configure_logging
 from app.routers import (
+    auth,
     expenses,
     members,
     menu,
@@ -17,8 +18,10 @@ from app.routers import (
     refunds,
     scan,
     topups,
+    users,
 )
 from app.routers import settings as settings_router
+from app.services.auth_service import bootstrap_initial_admin
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -28,6 +31,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     await ensure_indexes()
     await get_global_settings()
+    await bootstrap_initial_admin()
     logger.info("startup_complete app_name=%s", settings.app_name)
     yield
 
@@ -44,6 +48,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(members.router)
 app.include_router(scan.router)
 app.include_router(topups.router)

@@ -23,6 +23,8 @@ menu_categories = db["menu_categories"]
 refunds = db["refunds"]
 expenses = db["expenses"]
 settings_collection = db["settings"]
+users = db["users"]
+sessions = db["sessions"]
 
 
 async def ensure_indexes():
@@ -36,6 +38,11 @@ async def ensure_indexes():
     await menu_categories.create_index("name", unique=True)
     await refunds.create_index("member_id")
     await expenses.create_index("date")
+    await users.create_index("username", unique=True)
+    # expireAfterSeconds=0: MongoDB deletes a session document itself once
+    # its own expires_at is in the past — no scheduled cleanup job needed,
+    # same reasoning as the scan-window design elsewhere in this codebase.
+    await sessions.create_index("expires_at", expireAfterSeconds=0)
 
 
 _GLOBAL_SETTINGS_DEFAULTS = {
@@ -52,6 +59,12 @@ _GLOBAL_SETTINGS_DEFAULTS = {
     "local_timezone": "UTC",
     "upi_id": "",
     "upi_payee_name": "",
+    # Price per unit — a top-up/refund's amount is computed from units x
+    # price, not typed in by hand (see app/routers/topups.py, refunds.py).
+    "unit_prices": {"lunch": 0.0, "breakfast": 0.0, "brunch": 0.0},
+    # Shown in the dashboard's nav bar and browser tab title — purely
+    # cosmetic branding, not the FastAPI/PDF app_name in app.core.config.
+    "app_name": "Canteen Coupon System",
 }
 
 

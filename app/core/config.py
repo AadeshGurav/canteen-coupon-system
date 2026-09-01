@@ -25,5 +25,15 @@ class Settings(BaseSettings):
     # Logging (the admin's primary debugging tool — see docs/PRD.md §7)
     logs_dir: str = "logs"
 
+    # Auth bootstrap: if the users collection is empty at startup, one admin
+    # account is created from these. If a password isn't set, a random one
+    # is generated and logged prominently (never silently) — the admin can
+    # change it immediately after logging in via the Users page. This is the
+    # only auth-related env config; everything after first login (more
+    # users, roles, password resets) is managed through the app itself.
+    initial_admin_username: str = "admin"
+    initial_admin_password: str = ""
+    session_ttl_hours: int = 12
+
 
 settings = Settings()
