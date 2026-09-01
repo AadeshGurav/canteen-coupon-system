@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class TopupCreate(BaseModel):
@@ -12,6 +12,16 @@ class TopupCreate(BaseModel):
     amount: float = Field(ge=0)
     payment_method: Literal["cash", "upi"]
     created_by: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _reject_no_op_topup(self) -> "TopupCreate":
+        # Zero units and zero amount records a transaction that changed
+        # nothing — almost always a data-entry mistake, not an intentional
+        # top-up (docs/PRD.md §7: "every action... should have a clear,
+        # unambiguous outcome").
+        if self.amount == 0 and self.lunch_units == self.breakfast_units == self.brunch_units == 0:
+            raise ValueError("A top-up needs a non-zero amount or at least one unit.")
+        return self
 
 
 class TopupOut(BaseModel):
@@ -25,7 +35,7 @@ class TopupOut(BaseModel):
     amount: float
     payment_method: str
     payment_status: str
-    bill_pdf_path: Optional[str] = None
-    upi_qr_path: Optional[str] = None
+    bill_pdf_path: str | None = None
+    upi_qr_path: str | None = None
     created_by: str
     created_at: datetime

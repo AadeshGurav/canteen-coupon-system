@@ -1,14 +1,14 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScanRequest(BaseModel):
-    qr_code_id: str
+    qr_code_id: str = Field(min_length=1)
     # meal_type is normally auto-detected from current time/day, but can be
     # overridden by the counter operator if needed (e.g. testing, edge cases)
-    meal_type_override: Optional[Literal["lunch", "breakfast", "brunch"]] = None
+    meal_type_override: Literal["lunch", "breakfast", "brunch"] | None = None
 
 
 class ScanResult(BaseModel):
@@ -19,10 +19,10 @@ class ScanResult(BaseModel):
         "rejected_unknown_code",
         "rejected_inactive",
     ]
-    member_name: Optional[str] = None
-    member_type: Optional[str] = None
-    meal_type: Optional[str] = None
-    remaining_balance: Optional[int] = None
+    member_name: str | None = None
+    member_type: str | None = None
+    meal_type: str | None = None
+    remaining_balance: int | None = None
     via_grace: bool = False  # true if this meal was only possible because of the grace allowance
     message: str
 
@@ -37,9 +37,9 @@ class ScanOut(BaseModel):
     result: str
     via_grace: bool = False
     reversed: bool = False
-    reversed_at: Optional[datetime] = None
+    reversed_at: datetime | None = None
 
 
 class ReversalRequest(BaseModel):
-    scan_id: str
-    reversed_by: str
+    scan_id: str = Field(min_length=1)
+    reversed_by: str = Field(min_length=1)

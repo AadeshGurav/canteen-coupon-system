@@ -1,8 +1,8 @@
 from datetime import date, datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.database import menu_categories, menu_log
 from app.utils.object_id import parse_object_id
@@ -13,9 +13,11 @@ router = APIRouter(prefix="/menu", tags=["menu"])
 class MenuEntryCreate(BaseModel):
     date: date
     meal_type: Literal["lunch", "breakfast", "brunch"]
-    categories: list[str]  # names from menu-categories, e.g. ["Jain", "Normal"]
-    items: list[str]
-    created_by: str
+    # names from menu-categories, e.g. ["Jain", "Normal"] — at least one,
+    # per docs/PRD.md §6.5 ("tagged with one or more menu categories")
+    categories: list[str] = Field(min_length=1)
+    items: list[str] = Field(min_length=1)
+    created_by: str = Field(min_length=1)
 
 
 async def _validate_categories(names: list[str]) -> None:
@@ -39,7 +41,7 @@ async def add_menu_entry(payload: MenuEntryCreate):
 
 
 @router.get("")
-async def list_menu(start: Optional[date] = None, end: Optional[date] = None):
+async def list_menu(start: date | None = None, end: date | None = None):
     query = {}
     if start or end:
         query["date"] = {}
