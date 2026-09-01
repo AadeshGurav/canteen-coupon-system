@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu Planning — Canteen Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<nav id="admin-nav"></nav>
+<main>
+  <h1>Menu Planning</h1>
+
+  <section class="card">
+    <h2>Menu categories</h2>
+    <p class="empty-state">Admin-managed tags (e.g. Jain, Normal, Staff) used to label menu entries below.</p>
+    <div class="form-row">
+      <div class="field">
+        <label for="category-name">New category name</label>
+        <input id="category-name" type="text" placeholder="e.g. Jain">
+      </div>
+      <div class="field">
+        <label for="category-description">Description (optional)</label>
+        <input id="category-description" type="text">
+      </div>
+      <div class="field">
+        <button id="btn-add-category" type="button">Add category</button>
+      </div>
+    </div>
+    <div id="categories-list" class="actions"></div>
+  </section>
+
+  <section class="card">
+    <h2>Log today's menu</h2>
+    <form id="menu-form">
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="menu-date">Date</label>
+          <input id="menu-date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="menu-meal-type">Meal</label>
+          <select id="menu-meal-type" required>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="brunch">Brunch (Saturday)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Categories</label>
+        <div id="menu-categories-checkboxes" class="actions"></div>
+      </div>
+      <div class="field">
+        <label for="menu-items">Items (comma-separated)</label>
+        <input id="menu-items" type="text" placeholder="e.g. Dal, Rice, Roti, Sabzi" required>
+      </div>
+      <div class="field">
+        <label for="menu-created-by">Logged by</label>
+        <input id="menu-created-by" type="text" required placeholder="Your name">
+      </div>
+      <button type="submit">Log menu entry</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Recent menu log</h2>
+    <div class="table-wrap">
+      <table id="menu-table">
+        <thead>
+          <tr><th>Date</th><th>Meal</th><th>Categories</th><th>Items</th><th></th></tr>
+        </thead>
+        <tbody id="menu-body">
+          <tr><td colspan="5" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/menu.js"></script>
+</body>
+</html>

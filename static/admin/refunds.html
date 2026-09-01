@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refunds — Canteen Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<nav id="admin-nav"></nav>
+<main>
+  <h1>Refunds</h1>
+  <p class="empty-state">Recording a refund deducts units from the member's balance and keeps
+    a record of what was refunded and why. Actual money movement (cash, transfer) happens
+    outside this app — this doesn't automatically deactivate the member.</p>
+
+  <section class="card">
+    <h2>Record a refund</h2>
+    <form id="refund-form">
+      <div class="field">
+        <label for="refund-member">Member</label>
+        <select id="refund-member" required></select>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="refund-lunch">Lunch units</label>
+          <input id="refund-lunch" type="number" value="0" min="0">
+        </div>
+        <div class="field">
+          <label for="refund-breakfast">Breakfast units</label>
+          <input id="refund-breakfast" type="number" value="0" min="0">
+        </div>
+        <div class="field">
+          <label for="refund-brunch">Brunch units</label>
+          <input id="refund-brunch" type="number" value="0" min="0">
+        </div>
+        <div class="field">
+          <label for="refund-amount">Refund amount (₹)</label>
+          <input id="refund-amount" type="number" min="0" step="0.01" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="refund-reason">Reason</label>
+        <input id="refund-reason" type="text" placeholder="e.g. Left the school">
+      </div>
+      <div class="field">
+        <label for="refund-processed-by">Processed by</label>
+        <input id="refund-processed-by" type="text" required placeholder="Your name">
+      </div>
+      <button type="submit">Record refund</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Recent refunds</h2>
+    <div class="table-wrap">
+      <table id="refunds-table">
+        <thead><tr><th>Date</th><th>Member</th><th>Units (L/B/Br)</th><th>Amount</th><th>Reason</th></tr></thead>
+        <tbody id="refunds-body">
+          <tr><td colspan="5" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/refunds.js"></script>
+</body>
+</html>

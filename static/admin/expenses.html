@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expenses — Canteen Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<nav id="admin-nav"></nav>
+<main>
+  <h1>Expenses &amp; Revenue</h1>
+
+  <section class="card">
+    <h2>Log an expense</h2>
+    <form id="expense-form">
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="expense-category">Category</label>
+          <input id="expense-category" type="text" required placeholder="e.g. Groceries">
+        </div>
+        <div class="field">
+          <label for="expense-amount">Amount (₹)</label>
+          <input id="expense-amount" type="number" min="0" step="0.01" required>
+        </div>
+        <div class="field">
+          <label for="expense-date">Date</label>
+          <input id="expense-date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="expense-created-by">Logged by</label>
+          <input id="expense-created-by" type="text" required placeholder="Your name">
+        </div>
+      </div>
+      <div class="field">
+        <label for="expense-description">Description</label>
+        <input id="expense-description" type="text" required>
+      </div>
+      <button type="submit">Log expense</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Revenue vs. expense summary</h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="summary-start">From</label>
+        <input id="summary-start" type="date">
+      </div>
+      <div class="field">
+        <label for="summary-end">To</label>
+        <input id="summary-end" type="date">
+      </div>
+      <div class="field">
+        <button id="btn-run-summary" type="button">Update summary</button>
+      </div>
+    </div>
+    <div class="grid grid-2" id="summary-stats"></div>
+  </section>
+
+  <section class="card">
+    <h2>Recent expenses</h2>
+    <div class="table-wrap">
+      <table id="expenses-table">
+        <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
+        <tbody id="expenses-body">
+          <tr><td colspan="4" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/expenses.js"></script>
+</body>
+</html>

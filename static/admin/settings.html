@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings — Canteen Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<nav id="admin-nav"></nav>
+<main>
+  <h1>Settings</h1>
+  <p class="empty-state">Everything here is stored in the database and takes effect immediately —
+    no restart or code change needed.</p>
+
+  <form id="settings-form">
+    <section class="card">
+      <h2>Grace allowance</h2>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" id="grace-enabled" style="width:auto"> Enable grace allowance globally
+        </label>
+      </div>
+      <div class="field">
+        <label for="grace-units">Default units of credit allowed</label>
+        <input id="grace-units" type="number" min="0">
+      </div>
+      <p class="empty-state">Individual members can still get their own override — set that on the
+        <a href="members.html">Members</a> page.</p>
+    </section>
+
+    <section class="card">
+      <h2>Meal windows</h2>
+      <div class="grid grid-2" id="meal-windows-fields"></div>
+      <p class="empty-state">Brunch only applies on Saturdays, replacing separate breakfast/lunch that day.</p>
+    </section>
+
+    <section class="card">
+      <h2>Scan reversal</h2>
+      <div class="field">
+        <label for="reversal-window">Reversal window (minutes)</label>
+        <input id="reversal-window" type="number" min="0">
+      </div>
+    </section>
+
+    <button type="submit">Save settings</button>
+  </form>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>
