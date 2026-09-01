@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from app.core.config import settings
 from app.core.database import get_global_settings, member_entities, scans
 from app.schemas.scan import ScanResult
 from app.utils.meal_window import current_meal_type, day_bounds, to_local
@@ -15,9 +14,10 @@ logger = logging.getLogger(__name__)
 async def process_scan(qr_code_id: str, meal_type_override: str | None = None) -> ScanResult:
     # Stored timestamps stay UTC; meal-window/day-of-week resolution needs
     # the canteen's own local wall-clock time (see to_local()'s docstring).
+    # local_timezone is admin-editable settings, not an env var.
     now_utc = datetime.now(timezone.utc)
-    now_local = to_local(now_utc, settings.local_timezone)
     global_settings = await get_global_settings()
+    now_local = to_local(now_utc, global_settings["local_timezone"])
 
     member = await member_entities.find_one({"qr_code_id": qr_code_id})
     if member is None:

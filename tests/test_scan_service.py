@@ -18,6 +18,9 @@ def make_settings(**overrides) -> dict:
         "grace_allowance_units": 0,
         "reversal_window_minutes": 10,
         "meal_windows": MEAL_WINDOWS,
+        "local_timezone": "UTC",
+        "upi_id": "",
+        "upi_payee_name": "",
     }
     settings.update(overrides)
     return settings
@@ -98,6 +101,28 @@ async def test_accepted_scan_deducts_one_unit(fake_db, monkeypatch):
 
     updated = await members.find_one({"qr_code_id": "abc123"})
     assert updated["balances"]["lunch"] == 1
+
+
+@pytest.mark.asyncio
+async def test_local_timezone_comes_from_settings_not_env(fake_db, monkeypatch):
+    """Regression guard: local_timezone is admin-editable settings (see
+    app/routers/settings.py), not app.core.config — process_scan must read
+    it from global_settings, never from env config directly."""
+    members, _ = fake_db
+    use_settings(monkeypatch, local_timezone="Asia/Kolkata")
+    await create_member(members, balances={"lunch": 1, "breakfast": 0, "brunch": 0})
+
+    real_to_local = scan_service.to_local
+    captured = {}
+
+    def spy_to_local(dt, tz_name):
+        captured["tz_name"] = tz_name
+        return real_to_local(dt, tz_name)
+
+    monkeypatch.setattr(scan_service, "to_local", spy_to_local)
+    await scan_service.process_scan("abc123", meal_type_override="lunch")
+
+    assert captured["tz_name"] == "Asia/Kolkata"
 
 
 @pytest.mark.asyncio

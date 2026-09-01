@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from app.core.database import member_entities, topups
+from app.core.database import get_global_settings, member_entities, topups
 from app.schemas.topup import TopupCreate
 from app.services.billing_service import generate_bill_pdf, generate_upi_qr
 from app.utils.object_id import parse_object_id
@@ -83,7 +83,14 @@ async def create_topup(payload: TopupCreate):
     upi_qr_path = None
     try:
         if payload.payment_method == "upi":
-            upi_qr_path = generate_upi_qr(payload.amount, f"Canteen topup {topup_id}", topup_id)
+            global_settings = await get_global_settings()
+            upi_qr_path = generate_upi_qr(
+                payload.amount,
+                f"Canteen topup {topup_id}",
+                topup_id,
+                upi_id=global_settings["upi_id"],
+                upi_payee_name=global_settings["upi_payee_name"],
+            )
 
         bill_path = generate_bill_pdf(
             topup_id=topup_id,

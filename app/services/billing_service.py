@@ -8,15 +8,18 @@ from reportlab.pdfgen import canvas
 from app.core.config import settings
 
 
-def generate_upi_qr(amount: float, note: str, topup_id: str) -> str | None:
+def generate_upi_qr(amount: float, note: str, topup_id: str, upi_id: str, upi_payee_name: str) -> str | None:
     """Generate a UPI payment QR using the standard upi:// URI scheme.
-    Returns None if no UPI ID is configured (cash-only setups)."""
-    if not settings.upi_id:
+    Returns None if no UPI ID is configured (cash-only setups). upi_id/
+    upi_payee_name come from the admin-editable settings document (see
+    app/routers/settings.py), not env config — the admin can set these
+    without a restart."""
+    if not upi_id:
         return None
 
     params = {
-        "pa": settings.upi_id,  # payee address
-        "pn": settings.upi_payee_name,  # payee name
+        "pa": upi_id,  # payee address
+        "pn": upi_payee_name,  # payee name
         "am": f"{amount:.2f}",
         "cu": "INR",
         "tn": note,
