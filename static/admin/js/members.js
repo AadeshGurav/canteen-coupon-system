@@ -1,11 +1,21 @@
 // Member CRUD, credit adjustments, and QR reprinting for the admin dashboard.
+// Read-only for the counter role (they can look members up for a top-up,
+// but everything that changes a member is admin-only — same boundary the
+// API itself enforces, mirrored here so the UI doesn't offer a button that
+// would just come back as a 403).
 
 let allMembers = [];
+let globalSettings = null;
+const isAdmin = getAuth()?.role === "admin";
 
 const membersBody = document.getElementById("members-body");
 const filterType = document.getElementById("filter-type");
 const filterStatus = document.getElementById("filter-status");
 const filterSearch = document.getElementById("filter-search");
+
+if (!isAdmin) {
+  document.getElementById("btn-new-member").style.display = "none";
+}
 
 async function loadMembers() {
   const params = new URLSearchParams();
@@ -20,6 +30,31 @@ async function loadMembers() {
   }
 }
 
+// Grace units remaining per meal type — grace lets a balance go to
+// -graceUnits before a scan is rejected, so "remaining" is how much further
+// negative that meal's balance could still go.
+function graceLeft(member, mealType) {
+  if (!globalSettings) return null;
+  const override = member.grace_allowance_override;
+  const grace = override ?? (globalSettings.grace_allowance_enabled ? globalSettings.grace_allowance_units : 0);
+  if (grace === 0) return 0;
+  const balance = member.balances[mealType];
+  const used = balance < 0 ? -balance : 0;
+  return Math.max(0, grace - used);
+}
+
+function renderGraceCell(member) {
+  if (!globalSettings) return "—";
+  const override = member.grace_allowance_override;
+  const graceActive = override != null || globalSettings.grace_allowance_enabled;
+  if (!graceActive) return '<span class="empty-state">off</span>';
+
+  const l = graceLeft(member, "lunch");
+  const b = graceLeft(member, "breakfast");
+  const br = graceLeft(member, "brunch");
+  return `<span title="Lunch / Breakfast / Brunch">L:${l} B:${b} Br:${br}</span>`;
+}
+
 function renderMembers() {
   const search = filterSearch.value.trim().toLowerCase();
   const rows = allMembers.filter((m) => !search || m.name.toLowerCase().includes(search));
@@ -29,15 +64,25 @@ function renderMembers() {
     return;
   }
 
-  membersBody.innerHTML = rows.map((m) => {
-    const details = m.type === "student"
-      ? [m.class_name, m.roll_number].filter(Boolean).join(" / ") || "—"
-      : (m.staff_id || "—");
-    const statusBadge = m.status === "active"
-      ? '<span class="badge badge-success">Active</span>'
-      : '<span class="badge badge-neutral">Inactive</span>';
+  membersBody.innerHTML = rows
+    .map((m) => {
+      const details =
+        m.type === "student"
+          ? [m.class_name, m.roll_number].filter(Boolean).join(" / ") || "—"
+          : m.staff_id || "—";
+      const statusBadge =
+        m.status === "active"
+          ? '<span class="badge badge-success">Active</span>'
+          : '<span class="badge badge-neutral">Inactive</span>';
 
-    return `
+      const actions = isAdmin
+        ? `<button class="secondary btn-edit">Edit</button>
+           <button class="secondary btn-credit">Credit</button>
+           <button class="secondary btn-reprint">QR</button>
+           <button class="secondary btn-toggle-status">${m.status === "active" ? "Deactivate" : "Activate"}</button>`
+        : `<span class="empty-state">view only</span>`;
+
+      return `
       <tr data-id="${m._id}">
         <td>${escapeHtml(m.name)}</td>
         <td>${m.type}</td>
@@ -45,16 +90,12 @@ function renderMembers() {
         <td>${m.balances.lunch}</td>
         <td>${m.balances.breakfast}</td>
         <td>${m.balances.brunch}</td>
-        <td>${m.grace_allowance_override ?? "—"}</td>
+        <td>${renderGraceCell(m)}</td>
         <td>${statusBadge}</td>
-        <td class="actions">
-          <button class="secondary btn-edit">Edit</button>
-          <button class="secondary btn-credit">Credit</button>
-          <button class="secondary btn-reprint">QR</button>
-          <button class="secondary btn-toggle-status">${m.status === "active" ? "Deactivate" : "Activate"}</button>
-        </td>
+        <td class="actions">${actions}</td>
       </tr>`;
-  }).join("");
+    })
+    .join("");
 }
 
 function findMember(id) {
@@ -187,7 +228,11 @@ membersBody.addEventListener("click", async (e) => {
 
 async function reprintQr(member) {
   try {
-    const res = await fetch(`/members/${member._id}/reprint-qr`, { method: "POST" });
+    const auth = getAuth();
+    const res = await fetch(`/members/${member._id}/reprint-qr`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${auth.token}` },
+    });
     if (!res.ok) throw new Error("Could not generate QR image.");
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -213,4 +258,11 @@ filterType.addEventListener("change", loadMembers);
 filterStatus.addEventListener("change", loadMembers);
 filterSearch.addEventListener("input", renderMembers);
 
-loadMembers();
+(async function init() {
+  try {
+    globalSettings = await api.get("/settings");
+  } catch (_) {
+    // counter role or a transient error — grace column just shows "—"
+  }
+  await loadMembers();
+})();
