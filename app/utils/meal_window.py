@@ -33,13 +33,18 @@ def current_meal_type(dt: datetime, meal_windows: dict) -> str | None:
     return None
 
 
-def meal_window_bounds(meal_type: str, dt: datetime, meal_windows: dict) -> tuple[datetime, datetime]:
-    """Return (start, end) datetimes for the given meal's window on dt's date.
-    Used to check whether a member has already been scanned in *this* window,
-    which is what actually enforces the one-scan-per-meal lock."""
-    window = meal_windows[meal_type]
-    start_t = _parse_hhmm(window["start"])
-    end_t = _parse_hhmm(window["end"])
-    start = dt.replace(hour=start_t.hour, minute=start_t.minute, second=0, microsecond=0)
-    end = dt.replace(hour=end_t.hour, minute=end_t.minute, second=59, microsecond=999999)
+def day_bounds(dt: datetime) -> tuple[datetime, datetime]:
+    """Return (start, end) datetimes spanning dt's calendar date.
+
+    Used to check whether a member has already been scanned for a given meal
+    *today*, which is what enforces the one-scan-per-meal lock. Deliberately
+    day-based rather than tied to the meal's configured clock window: a scan
+    accepted via `meal_type_override` (see ScanRequest) can legitimately fall
+    outside that window's normal hours, and the lock must still catch a
+    second scan for the same meal — using the meal window's own bounds here
+    would let an overridden scan's real timestamp fall outside the range it's
+    searched against, silently defeating the lock.
+    """
+    start = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
     return start, end
