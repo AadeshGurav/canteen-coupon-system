@@ -23,6 +23,11 @@
   .idle { background: #333; font-weight: 400; font-size: 16px; color: #aaa; }
   #sub { font-size: 14px; font-weight: 400; margin-top: 6px; opacity: 0.85; }
   h1 { font-size: 18px; margin: 14px 0 0; }
+  .grace-badge {
+    display: inline-block; background: #f9a825; color: #111; font-size: 12px;
+    font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px;
+    vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -55,7 +60,8 @@
       const data = await res.json();
 
       if (data.result === "accepted") {
-        showResult("accepted", `✓ ${data.member_name}`, data.message);
+        const badge = data.via_grace ? ' <span class="grace-badge">GRACE</span>' : "";
+        showResult("accepted", `✓ ${data.member_name}${badge}`, data.message);
       } else {
         showResult("rejected", `✗ ${data.member_name || "Unknown code"}`, data.message);
       }
