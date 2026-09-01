@@ -63,6 +63,14 @@ jobs:
       - name: Run pytest with coverage
         run: pytest --cov=app --cov-report=term-missing --cov-report=xml --junitxml=pytest-results.xml
 
+      # Renders what was actually tested — in plain English, grouped by
+      # feature area — straight onto this run's summary page, so anyone
+      # (not just someone comfortable reading test code) can see exactly
+      # what's verified without opening a log or downloading an artifact.
+      - name: Publish human-readable test summary
+        if: always()
+        run: python3 scripts/generate_test_summary.py pytest-results.xml "$GITHUB_STEP_SUMMARY"
+
       - name: Upload test results and coverage
         if: always()
         uses: actions/upload-artifact@v7

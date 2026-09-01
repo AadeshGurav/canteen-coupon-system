@@ -9,6 +9,7 @@ and admin-managed billing. Built for a single campus, single canteen pilot.
 
 Full requirements: [`docs/PRD.md`](docs/PRD.md)
 For canteen staff/admin day-to-day usage: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)
+What's actually tested, in plain English: [`docs/TESTING.md`](docs/TESTING.md)
 
 ---
 
@@ -179,7 +180,10 @@ pytest
 Tests run entirely against in-memory fakes (`tests/fakes.py`) — no MongoDB
 required. Coverage focuses on `app/services/scan_service.py` and
 `app/utils/meal_window.py`, since the PRD calls the scan accept/reject flow
-"the highest-frequency, highest-stakes part of the system."
+"the highest-frequency, highest-stakes part of the system." See
+[`docs/TESTING.md`](docs/TESTING.md) for what every test actually verifies,
+in plain English — the same summary is posted to every CI run's job summary
+automatically.
 
 ### Logging
 
