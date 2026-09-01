@@ -1,23 +1,21 @@
+import logging
 from datetime import datetime
 from typing import Optional
 
-from bson import ObjectId
-from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from app.core.database import member_entities
-from app.schemas.member import MemberCreate, MemberUpdate, CreditUpdate
+from app.schemas.member import CreditUpdate, MemberCreate, MemberUpdate
 from app.services.qr_service import generate_qr_code_id, render_qr_image
+from app.utils.object_id import parse_object_id
 
 router = APIRouter(prefix="/members", tags=["members"])
+logger = logging.getLogger(__name__)
 
 
-def _oid(id_str: str) -> ObjectId:
-    try:
-        return ObjectId(id_str)
-    except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid member id.")
+def _oid(id_str: str):
+    return parse_object_id(id_str, "member")
 
 
 def _serialize(doc: dict) -> dict:
@@ -25,23 +23,52 @@ def _serialize(doc: dict) -> dict:
     return doc
 
 
-@router.post("")
-async def create_member(payload: MemberCreate):
+async def _insert_member(payload: MemberCreate) -> dict:
     now = datetime.utcnow()
     qr_code_id = generate_qr_code_id()
 
     doc = payload.model_dump()
-    doc.update({
-        "qr_code_id": qr_code_id,
-        "status": "active",
-        "created_at": now,
-        "updated_at": now,
-    })
+    doc.update(
+        {
+            "qr_code_id": qr_code_id,
+            "status": "active",
+            "created_at": now,
+            "updated_at": now,
+        }
+    )
     result = await member_entities.insert_one(doc)
     render_qr_image(qr_code_id)
 
     created = await member_entities.find_one({"_id": result.inserted_id})
     return _serialize(created)
+
+
+@router.post("")
+async def create_member(payload: MemberCreate):
+    created = await _insert_member(payload)
+    logger.info(
+        "member.created member_id=%s type=%s name=%s", created["_id"], created["type"], created["name"]
+    )
+    return created
+
+
+@router.post("/bulk")
+async def bulk_create_members(payload: list[MemberCreate]):
+    """Migrate existing paper-based records in one request. Each row is
+    inserted independently — one bad row doesn't fail the whole batch, since
+    the point of this endpoint is a large, messy, one-time paper-to-digital
+    migration (see docs/PRD.md §6.1)."""
+    created = []
+    failed = []
+    for index, member in enumerate(payload):
+        try:
+            created.append(await _insert_member(member))
+        except Exception as exc:
+            logger.exception("member.bulk_create_failed index=%d name=%s", index, member.name)
+            failed.append({"index": index, "name": member.name, "error": str(exc)})
+
+    logger.info("member.bulk_created count=%d failed=%d", len(created), len(failed))
+    return {"created": created, "failed": failed}
 
 
 @router.get("")
@@ -73,6 +100,7 @@ async def update_member(member_id: str, payload: MemberUpdate):
     result = await member_entities.update_one({"_id": _oid(member_id)}, {"$set": updates})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Member not found.")
+    logger.info("member.updated member_id=%s fields=%s", member_id, list(updates.keys()))
 
     doc = await member_entities.find_one({"_id": _oid(member_id)})
     return _serialize(doc)
@@ -83,6 +111,7 @@ async def delete_member(member_id: str):
     result = await member_entities.delete_one({"_id": _oid(member_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Member not found.")
+    logger.warning("member.deleted member_id=%s", member_id)
     return {"success": True}
 
 
@@ -100,6 +129,13 @@ async def credit_member(member_id: str, payload: CreditUpdate):
     await member_entities.update_one(
         {"_id": member["_id"]},
         {"$set": {**new_balances, "updated_at": datetime.utcnow()}},
+    )
+    logger.info(
+        "member.credited member_id=%s lunch=%+d breakfast=%+d brunch=%+d",
+        member_id,
+        payload.lunch_units,
+        payload.breakfast_units,
+        payload.brunch_units,
     )
     doc = await member_entities.find_one({"_id": member["_id"]})
     return _serialize(doc)
