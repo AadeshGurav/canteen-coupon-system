@@ -5,7 +5,7 @@ from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.core.database import menu_log
+from app.core.database import menu_log, menu_categories
 
 router = APIRouter(prefix="/menu", tags=["menu"])
 
@@ -13,13 +13,24 @@ router = APIRouter(prefix="/menu", tags=["menu"])
 class MenuEntryCreate(BaseModel):
     date: date
     meal_type: Literal["lunch", "breakfast", "brunch"]
-    audience: Literal["student", "staff", "both"]
+    categories: list[str]  # names from menu-categories, e.g. ["Jain", "Normal"]
     items: list[str]
     created_by: str
 
 
+async def _validate_categories(names: list[str]) -> None:
+    existing = {doc["name"] async for doc in menu_categories.find({"name": {"$in": names}})}
+    unknown = [n for n in names if n not in existing]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown menu category/categories: {', '.join(unknown)}. Create them first via /menu-categories.",
+        )
+
+
 @router.post("")
 async def add_menu_entry(payload: MenuEntryCreate):
+    await _validate_categories(payload.categories)
     doc = payload.model_dump()
     doc["date"] = datetime.combine(payload.date, datetime.min.time())
     result = await menu_log.insert_one(doc)
