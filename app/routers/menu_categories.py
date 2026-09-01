@@ -1,21 +1,17 @@
 from datetime import datetime
 
-from bson import ObjectId
-from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException
 from pymongo.errors import DuplicateKeyError
 
 from app.core.database import menu_categories
 from app.schemas.menu_category import MenuCategoryCreate, MenuCategoryUpdate
+from app.utils.object_id import parse_object_id
 
 router = APIRouter(prefix="/menu-categories", tags=["menu-categories"])
 
 
-def _oid(id_str: str) -> ObjectId:
-    try:
-        return ObjectId(id_str)
-    except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid menu category id.")
+def _oid(id_str: str):
+    return parse_object_id(id_str, "menu category")
 
 
 def _serialize(doc: dict) -> dict:

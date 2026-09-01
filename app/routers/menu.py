@@ -1,11 +1,11 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.core.database import menu_log, menu_categories
+from app.core.database import menu_categories, menu_log
+from app.utils.object_id import parse_object_id
 
 router = APIRouter(prefix="/menu", tags=["menu"])
 
@@ -55,7 +55,7 @@ async def list_menu(start: Optional[date] = None, end: Optional[date] = None):
 
 @router.delete("/{entry_id}")
 async def delete_menu_entry(entry_id: str):
-    result = await menu_log.delete_one({"_id": ObjectId(entry_id)})
+    result = await menu_log.delete_one({"_id": parse_object_id(entry_id, "menu entry")})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Menu entry not found.")
     return {"success": True}
