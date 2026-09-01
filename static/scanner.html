@@ -9,37 +9,94 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; padding: 0; font-family: -apple-system, Roboto, sans-serif;
-    background: #111; color: #fff; min-height: 100vh;
+    background: #0a0b0d; color: #f5f7fa; min-height: 100vh;
     display: flex; flex-direction: column; align-items: center;
   }
+  [hidden] { display: none !important; }
   #reader { width: 100%; max-width: 420px; margin-top: 12px; }
   #result {
     width: 100%; max-width: 420px; margin-top: 16px; padding: 24px 16px;
     border-radius: 12px; text-align: center; font-size: 20px; font-weight: 600;
     min-height: 90px; display: flex; align-items: center; justify-content: center;
   }
-  .accepted { background: #1b5e20; }
-  .rejected { background: #b71c1c; }
-  .idle { background: #333; font-weight: 400; font-size: 16px; color: #aaa; }
+  .accepted { background: #065f46; }
+  .rejected { background: #7f1d1d; }
+  .idle { background: #16181d; font-weight: 400; font-size: 16px; color: #9aa3b2; }
   #sub { font-size: 14px; font-weight: 400; margin-top: 6px; opacity: 0.85; }
   h1 { font-size: 18px; margin: 14px 0 0; }
   .grace-badge {
-    display: inline-block; background: #f9a825; color: #111; font-size: 12px;
+    display: inline-block; background: #fbbf24; color: #111; font-size: 12px;
     font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px;
     vertical-align: middle;
   }
+
+  /* Login gate — every scanner needs its own operator to sign in, since
+     scanning is now a permission (admin/counter/scanner) rather than an
+     unauthenticated kiosk action. */
+  #login-screen {
+    width: 100%; max-width: 340px; margin-top: 40px; padding: 24px;
+    background: #16181d; border: 1px solid #262a33; border-radius: 12px;
+  }
+  #login-screen label { display: block; font-size: 13px; color: #9aa3b2; margin: 12px 0 4px; }
+  #login-screen input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #262a33;
+    background: #0a0b0d; color: #f5f7fa; font-size: 16px;
+  }
+  #login-screen button {
+    width: 100%; margin-top: 18px; padding: 10px; border: none; border-radius: 8px;
+    background: #10b981; color: #06110c; font-weight: 700; font-size: 15px; cursor: pointer;
+  }
+  #login-error { color: #f87171; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  #signed-in-as { font-size: 12px; color: #9aa3b2; margin-top: 4px; }
+  #signed-in-as button { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; text-decoration: underline; }
 </style>
 </head>
 <body>
   <h1>Canteen Scanner</h1>
-  <div id="reader"></div>
-  <div id="result" class="idle">Point camera at a code</div>
+
+  <section id="login-screen">
+    <form id="login-form">
+      <label for="login-username">Username</label>
+      <input id="login-username" type="text" autocomplete="username" required>
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+      <div id="login-error" role="alert"></div>
+    </form>
+  </section>
+
+  <div id="scan-screen" hidden>
+    <div id="signed-in-as"></div>
+    <div id="reader"></div>
+    <div id="result" class="idle">Point camera at a code</div>
+  </div>
 
 <script>
   const API_BASE = ""; // same-origin; set to e.g. "http://canteen.local:8000" if served separately
+  const AUTH_STORAGE_KEY = "canteen_auth";
 
+  const loginScreen = document.getElementById("login-screen");
+  const scanScreen = document.getElementById("scan-screen");
   const resultEl = document.getElementById("result");
+  const loginError = document.getElementById("login-error");
   let busy = false;
+  let scannerStarted = false;
+
+  function getAuth() {
+    try {
+      return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function setAuth(auth) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  }
+
+  function clearAuth() {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
 
   function showResult(cls, text, sub) {
     resultEl.className = cls;
@@ -51,14 +108,24 @@
     busy = true;
     showResult("idle", "Checking...");
 
+    const auth = getAuth();
     try {
       const res = await fetch(`${API_BASE}/scan`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(auth ? { Authorization: `Bearer ${auth.token}` } : {}),
+        },
         body: JSON.stringify({ qr_code_id: qrCodeId }),
       });
-      const data = await res.json();
 
+      if (res.status === 401) {
+        clearAuth();
+        showLogin("Your session expired — sign in again.");
+        return;
+      }
+
+      const data = await res.json();
       if (data.result === "accepted") {
         const badge = data.via_grace ? ' <span class="grace-badge">GRACE</span>' : "";
         showResult("accepted", `✓ ${data.member_name}${badge}`, data.message);
@@ -73,13 +140,67 @@
     setTimeout(() => { busy = false; }, 2500);
   }
 
-  const scanner = new Html5Qrcode("reader");
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 220 },
-    onScanSuccess,
-    () => {} // ignore per-frame scan failures
-  );
+  function startScannerIfNeeded() {
+    if (scannerStarted) return;
+    scannerStarted = true;
+    const scanner = new Html5Qrcode("reader");
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 220 },
+      onScanSuccess,
+      () => {} // ignore per-frame scan failures
+    );
+  }
+
+  function showLogin(errorMessage) {
+    loginScreen.hidden = false;
+    scanScreen.hidden = true;
+    loginError.textContent = errorMessage || "";
+  }
+
+  function showScanScreen(auth) {
+    loginScreen.hidden = true;
+    scanScreen.hidden = false;
+    document.getElementById("signed-in-as").innerHTML =
+      `Signed in as ${auth.username} (${auth.role}) &middot; <button type="button" id="btn-sign-out">Sign out</button>`;
+    document.getElementById("btn-sign-out").addEventListener("click", () => {
+      clearAuth();
+      showLogin();
+    });
+    startScannerIfNeeded();
+  }
+
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError.textContent = "";
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("login-username").value,
+          password: document.getElementById("login-password").value,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        loginError.textContent = body.detail || "Invalid username or password.";
+        return;
+      }
+      const auth = await res.json();
+      setAuth(auth);
+      showScanScreen(auth);
+    } catch (err) {
+      loginError.textContent = "Could not reach server.";
+    }
+  });
+
+  const existingAuth = getAuth();
+  if (existingAuth) {
+    showScanScreen(existingAuth);
+  } else {
+    showLogin();
+  }
 </script>
 </body>
 </html>

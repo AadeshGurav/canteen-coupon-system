@@ -66,6 +66,7 @@ async function loadSummary() {
 document.getElementById("btn-run-summary").addEventListener("click", loadSummary);
 
 (async function init() {
+  document.getElementById("expense-created-by").value = getAuth()?.username || "";
   await loadExpenses();
   await loadSummary();
 })();

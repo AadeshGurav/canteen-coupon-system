@@ -6,7 +6,7 @@ let membersById = {};
 let reversalWindowMinutes = 10;
 
 const reversedByInput = document.getElementById("reversed-by");
-reversedByInput.value = localStorage.getItem("canteen_admin_name") || "";
+reversedByInput.value = localStorage.getItem("canteen_admin_name") || getAuth()?.username || "";
 reversedByInput.addEventListener("input", () => {
   localStorage.setItem("canteen_admin_name", reversedByInput.value);
 });
