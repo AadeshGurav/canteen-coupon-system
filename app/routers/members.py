@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
+from pymongo.errors import DuplicateKeyError
 
 from app.core.database import member_entities, refunds, scans, topups
 from app.schemas.member import (
@@ -29,19 +30,25 @@ def _serialize(doc: dict) -> dict:
 
 async def _insert_member(payload: MemberCreate) -> dict:
     now = datetime.now(timezone.utc)
-    qr_code_id = generate_qr_code_id()
 
     doc = payload.model_dump()
-    doc.update(
-        {
-            "qr_code_id": qr_code_id,
-            "status": "active",
-            "created_at": now,
-            "updated_at": now,
-        }
-    )
-    result = await member_entities.insert_one(doc)
-    render_qr_image(qr_code_id)
+    doc.update({"status": "active", "created_at": now, "updated_at": now})
+
+    # qr_code_id is a random 12-hex-char id (see generate_qr_code_id) — a
+    # collision is astronomically unlikely, but "unlikely" isn't "never":
+    # retry with a fresh id rather than surfacing a raw DuplicateKeyError to
+    # the admin as a generic 500 (same defensive pattern as
+    # menu_categories.py's uniqueness constraint).
+    for _ in range(3):
+        doc["qr_code_id"] = generate_qr_code_id()
+        try:
+            result = await member_entities.insert_one(doc)
+            break
+        except DuplicateKeyError:
+            continue
+    else:
+        raise HTTPException(status_code=500, detail="Could not generate a unique QR code — please try again.")
+    render_qr_image(doc["qr_code_id"])
 
     created = await member_entities.find_one({"_id": result.inserted_id})
     return _serialize(created)
