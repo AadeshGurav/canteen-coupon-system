@@ -47,10 +47,12 @@ once they see the money land in their own account.
 | Member management | Full CRUD for student & staff entities, bulk-friendly for paper-to-digital migration |
 | QR codes | Generate on creation, print, reprint (same code, never duplicated) |
 | Scanning | Single shared scanner page (phone browser), instant accept/reject, one scan per meal window |
-| Balances | Separate lunch / breakfast / brunch unit counts, grace allowance (global + per-member override) |
+| Balances | Separate lunch / breakfast / brunch unit counts, grace allowance (global + per-member override), **no automatic resets ever** — only scans, reversals, top-ups, and refunds change a balance |
 | Top-ups & billing | Cash or UPI QR, automatic PDF bill generation, manual UPI payment confirmation |
 | Reversal | Undo a mistaken scan within a configurable window, restores the unit |
-| Menu planning | Admin-only calendar/log of what's served, per date, per meal, per audience (student/staff/both) |
+| Grace tracking | Any meal given on the grace allowance is flagged (`via_grace`) on the scan record and shown as a badge on the scanner screen |
+| Menu planning | Admin-only calendar/log of what's served, per date, per meal, tagged with admin-managed menu categories (e.g. Jain, Normal, Staff) |
+| Refunds | Admin records a refund (units + amount + reason) when a member leaves; deducts the balance immediately, payout itself is handled outside the app |
 | Expenses | Log spend, see revenue vs. expense summary |
 | Settings | Meal windows, grace allowance, reversal window — all DB-backed, all editable at runtime |
 
@@ -79,7 +81,7 @@ app/
                            grace allowance check, balance deduction, reversal
     qr_service.py        — permanent, reprintable QR code generation
     billing_service.py   — UPI QR (upi://pay URI) + PDF bill generation
-  routers/    — HTTP endpoints (members, scan, topups, menu, expenses, settings)
+  routers/    — HTTP endpoints (members, scan, topups, menu, menu_categories, expenses, refunds, settings)
   utils/
     meal_window.py       — resolves current meal type from DB-backed settings,
                             handles the Saturday-brunch-only rule
@@ -122,6 +124,19 @@ Interactive API docs: `http://<host>:8000/docs`
 - **QR codes never change.** `qr_code_id` is generated once at member creation
   and reused for every reprint, so a lost card can never create a duplicate
   member entity.
+- **Balances never auto-reset.** No month-end, term-end, or scheduled reset
+  logic exists anywhere in this codebase, intentionally. A balance only moves
+  because of a scan, a reversal, a top-up, or a refund.
+- **Grace-allowance scans are flagged.** If a scan only succeeded because of
+  the grace allowance (balance went negative), the scan record stores
+  `via_grace: true` and the scanner page shows a "GRACE" badge, so it's
+  obvious at a glance who's eating on credit.
+- **Menu categories are admin-managed, not hardcoded.** Categories like Jain,
+  Normal, or Staff are CRUD records in `menu_categories`, not a fixed enum —
+  the admin can add/rename/remove them as the canteen's offering changes.
+- **Refunds don't move money.** `POST /refunds` deducts the specified units
+  from a member's balance and logs the amount/reason — the actual payout
+  (cash, transfer, etc.) is handled by the admin outside the app.
 - **UPI payments**: plain `upi://pay` QR, no payment gateway. Cash top-ups are
   marked `confirmed` immediately; UPI top-ups start `pending` until the admin
   manually confirms receipt via `POST /topups/{id}/confirm-payment`.
