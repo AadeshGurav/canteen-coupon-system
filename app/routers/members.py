@@ -1,12 +1,16 @@
 import logging
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from app.core.database import member_entities
-from app.schemas.member import CreditUpdate, MemberCreate, MemberUpdate
+from app.core.database import member_entities, refunds, scans, topups
+from app.schemas.member import (
+    CreditUpdate,
+    MemberCreate,
+    MemberUpdate,
+    validate_type_specific_fields,
+)
 from app.services.qr_service import generate_qr_code_id, render_qr_image
 from app.utils.object_id import parse_object_id
 
@@ -24,7 +28,7 @@ def _serialize(doc: dict) -> dict:
 
 
 async def _insert_member(payload: MemberCreate) -> dict:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     qr_code_id = generate_qr_code_id()
 
     doc = payload.model_dump()
@@ -72,7 +76,7 @@ async def bulk_create_members(payload: list[MemberCreate]):
 
 
 @router.get("")
-async def list_members(type: Optional[str] = None, status: Optional[str] = None):
+async def list_members(type: str | None = None, status: str | None = None):
     query = {}
     if type:
         query["type"] = type
@@ -95,20 +99,59 @@ async def update_member(member_id: str, payload: MemberUpdate):
     updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update.")
-    updates["updated_at"] = datetime.utcnow()
 
-    result = await member_entities.update_one({"_id": _oid(member_id)}, {"$set": updates})
-    if result.matched_count == 0:
+    existing = await member_entities.find_one({"_id": _oid(member_id)})
+    if existing is None:
         raise HTTPException(status_code=404, detail="Member not found.")
+
+    # type itself isn't in MemberUpdate (immutable after creation — see
+    # reprint_qr's docstring on qr_code_id for the same "never lets an
+    # identity split into two records" reasoning), but a raw PATCH could
+    # still set a staff_id on a student or vice versa without this check.
+    try:
+        validate_type_specific_fields(
+            existing["type"],
+            updates.get("class_name", existing.get("class_name")),
+            updates.get("roll_number", existing.get("roll_number")),
+            updates.get("staff_id", existing.get("staff_id")),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    updates["updated_at"] = datetime.now(timezone.utc)
+    await member_entities.update_one({"_id": existing["_id"]}, {"$set": updates})
     logger.info("member.updated member_id=%s fields=%s", member_id, list(updates.keys()))
 
-    doc = await member_entities.find_one({"_id": _oid(member_id)})
+    doc = await member_entities.find_one({"_id": existing["_id"]})
     return _serialize(doc)
 
 
 @router.delete("/{member_id}")
 async def delete_member(member_id: str):
-    result = await member_entities.delete_one({"_id": _oid(member_id)})
+    """Only for a member with no history yet (e.g. created by mistake).
+    Once a member has scans/top-ups/refunds, deleting them would orphan
+    those records' member_id references — breaking the audit trail this
+    system otherwise goes out of its way to preserve (scan reversal and
+    refunds both keep a record rather than delete one). Use PATCH
+    {"status": "inactive"} for a member who's actually leaving."""
+    oid = _oid(member_id)
+    has_history = any(
+        [
+            await scans.find_one({"member_id": member_id}),
+            await topups.find_one({"member_id": member_id}),
+            await refunds.find_one({"member_id": member_id}),
+        ]
+    )
+    if has_history:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This member has scan, top-up, or refund history and can't be deleted — "
+                "it would orphan those records. Set status to 'inactive' instead."
+            ),
+        )
+
+    result = await member_entities.delete_one({"_id": oid})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Member not found.")
     logger.warning("member.deleted member_id=%s", member_id)
@@ -128,7 +171,7 @@ async def credit_member(member_id: str, payload: CreditUpdate):
     }
     await member_entities.update_one(
         {"_id": member["_id"]},
-        {"$set": {**new_balances, "updated_at": datetime.utcnow()}},
+        {"$set": {**new_balances, "updated_at": datetime.now(timezone.utc)}},
     )
     logger.info(
         "member.credited member_id=%s lunch=%+d breakfast=%+d brunch=%+d",
