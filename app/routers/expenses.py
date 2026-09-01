@@ -1,12 +1,13 @@
 import logging
 from datetime import date, datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.core.database import expenses, topups
+from app.core.security import require_role
 
-router = APIRouter(prefix="/expenses", tags=["expenses"])
+router = APIRouter(prefix="/expenses", tags=["expenses"], dependencies=[Depends(require_role("admin"))])
 logger = logging.getLogger(__name__)
 
 

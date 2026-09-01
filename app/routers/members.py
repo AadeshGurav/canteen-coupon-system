@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pymongo.errors import DuplicateKeyError
 
 from app.core.database import member_entities, refunds, scans, topups
+from app.core.security import require_role
 from app.schemas.member import (
     CreditUpdate,
     MemberCreate,
@@ -17,6 +18,10 @@ from app.utils.object_id import parse_object_id
 
 router = APIRouter(prefix="/members", tags=["members"])
 logger = logging.getLogger(__name__)
+
+# Counter operators need to look members up to select who's topping up, but
+# nothing else here — everything that changes a member is admin-only.
+_READ_ROLES = ("admin", "counter")
 
 
 def _oid(id_str: str):
@@ -54,7 +59,7 @@ async def _insert_member(payload: MemberCreate) -> dict:
     return _serialize(created)
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_role("admin"))])
 async def create_member(payload: MemberCreate):
     created = await _insert_member(payload)
     logger.info(
@@ -63,7 +68,7 @@ async def create_member(payload: MemberCreate):
     return created
 
 
-@router.post("/bulk")
+@router.post("/bulk", dependencies=[Depends(require_role("admin"))])
 async def bulk_create_members(payload: list[MemberCreate]):
     """Migrate existing paper-based records in one request. Each row is
     inserted independently — one bad row doesn't fail the whole batch, since
@@ -82,7 +87,7 @@ async def bulk_create_members(payload: list[MemberCreate]):
     return {"created": created, "failed": failed}
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_role(*_READ_ROLES))])
 async def list_members(type: str | None = None, status: str | None = None):
     query = {}
     if type:
@@ -93,7 +98,7 @@ async def list_members(type: str | None = None, status: str | None = None):
     return [_serialize(d) for d in docs]
 
 
-@router.get("/{member_id}")
+@router.get("/{member_id}", dependencies=[Depends(require_role(*_READ_ROLES))])
 async def get_member(member_id: str):
     doc = await member_entities.find_one({"_id": _oid(member_id)})
     if doc is None:
@@ -101,7 +106,7 @@ async def get_member(member_id: str):
     return _serialize(doc)
 
 
-@router.patch("/{member_id}")
+@router.patch("/{member_id}", dependencies=[Depends(require_role("admin"))])
 async def update_member(member_id: str, payload: MemberUpdate):
     updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
     if not updates:
@@ -133,7 +138,7 @@ async def update_member(member_id: str, payload: MemberUpdate):
     return _serialize(doc)
 
 
-@router.delete("/{member_id}")
+@router.delete("/{member_id}", dependencies=[Depends(require_role("admin"))])
 async def delete_member(member_id: str):
     """Only for a member with no history yet (e.g. created by mistake).
     Once a member has scans/top-ups/refunds, deleting them would orphan
@@ -165,7 +170,7 @@ async def delete_member(member_id: str):
     return {"success": True}
 
 
-@router.post("/{member_id}/credit")
+@router.post("/{member_id}/credit", dependencies=[Depends(require_role("admin"))])
 async def credit_member(member_id: str, payload: CreditUpdate):
     member = await member_entities.find_one({"_id": _oid(member_id)})
     if member is None:
@@ -191,7 +196,7 @@ async def credit_member(member_id: str, payload: CreditUpdate):
     return _serialize(doc)
 
 
-@router.post("/{member_id}/reprint-qr")
+@router.post("/{member_id}/reprint-qr", dependencies=[Depends(require_role("admin"))])
 async def reprint_qr(member_id: str):
     """Reprint the member's original QR code — never generates a new code id,
     so a lost or damaged card never creates a duplicate entity."""

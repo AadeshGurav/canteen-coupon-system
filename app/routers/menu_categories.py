@@ -1,13 +1,16 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pymongo.errors import DuplicateKeyError
 
 from app.core.database import menu_categories
+from app.core.security import require_role
 from app.schemas.menu_category import MenuCategoryCreate, MenuCategoryUpdate
 from app.utils.object_id import parse_object_id
 
-router = APIRouter(prefix="/menu-categories", tags=["menu-categories"])
+router = APIRouter(
+    prefix="/menu-categories", tags=["menu-categories"], dependencies=[Depends(require_role("admin"))]
+)
 
 
 def _oid(id_str: str):

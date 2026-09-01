@@ -1,13 +1,14 @@
 from datetime import date, datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.database import menu_categories, menu_log
+from app.core.security import require_role
 from app.utils.object_id import parse_object_id
 
-router = APIRouter(prefix="/menu", tags=["menu"])
+router = APIRouter(prefix="/menu", tags=["menu"], dependencies=[Depends(require_role("admin"))])
 
 
 class MenuEntryCreate(BaseModel):

@@ -1,13 +1,14 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.database import member_entities, refunds
+from app.core.database import get_global_settings, member_entities, refunds
+from app.core.security import require_role
 from app.schemas.refund import RefundCreate
 from app.utils.object_id import parse_object_id
 
-router = APIRouter(prefix="/refunds", tags=["refunds"])
+router = APIRouter(prefix="/refunds", tags=["refunds"], dependencies=[Depends(require_role("admin"))])
 logger = logging.getLogger(__name__)
 
 
@@ -35,6 +36,16 @@ async def create_refund(payload: RefundCreate):
                 detail=f"Cannot refund {requested} {meal_type} units — member only has {balances.get(meal_type, 0)}.",
             )
 
+    # The refund amount is always computed from configured unit prices,
+    # never typed in by hand — same reasoning as topups.py's create_topup.
+    global_settings = await get_global_settings()
+    prices = global_settings["unit_prices"]
+    refund_amount = (
+        payload.lunch_units * prices["lunch"]
+        + payload.breakfast_units * prices["breakfast"]
+        + payload.brunch_units * prices["brunch"]
+    )
+
     now = datetime.now(timezone.utc)
     new_balances = {
         "lunch": balances.get("lunch", 0) - payload.lunch_units,
@@ -54,6 +65,7 @@ async def create_refund(payload: RefundCreate):
     )
 
     doc = payload.model_dump()
+    doc["refund_amount"] = refund_amount
     doc["created_at"] = now
     result = await refunds.insert_one(doc)
     doc["_id"] = str(result.inserted_id)
@@ -64,7 +76,7 @@ async def create_refund(payload: RefundCreate):
         payload.lunch_units,
         payload.breakfast_units,
         payload.brunch_units,
-        payload.refund_amount,
+        refund_amount,
         payload.processed_by,
     )
     return doc

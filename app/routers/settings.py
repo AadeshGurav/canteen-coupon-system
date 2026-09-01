@@ -1,11 +1,12 @@
 import logging
 from typing import Literal
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.database import get_global_settings, settings_collection
+from app.core.security import require_role
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 logger = logging.getLogger(__name__)
@@ -15,10 +16,20 @@ logger = logging.getLogger(__name__)
 # (the highest-stakes flow in the system) on the next scan attempt.
 _HHMM_PATTERN = r"^([01]\d|2[0-3]):[0-5]\d$"
 
+# Sorted once at import time, not per-request — the set of IANA zones a
+# given Python/OS ships with doesn't change while the process is running.
+_SORTED_TIMEZONES = sorted(available_timezones())
+
 
 class MealWindow(BaseModel):
     start: str = Field(pattern=_HHMM_PATTERN)
     end: str = Field(pattern=_HHMM_PATTERN)
+
+
+class UnitPrices(BaseModel):
+    lunch: float = Field(ge=0)
+    breakfast: float = Field(ge=0)
+    brunch: float = Field(ge=0)
 
 
 class SettingsUpdate(BaseModel):
@@ -38,6 +49,11 @@ class SettingsUpdate(BaseModel):
     # cash-only setups don't need either set.
     upi_id: str | None = None
     upi_payee_name: str | None = None
+    # Price per unit — top-up/refund amounts are computed from this, never
+    # typed in by hand (see app/routers/topups.py, refunds.py).
+    unit_prices: UnitPrices | None = None
+    # Shown in the dashboard's nav bar and browser tab title.
+    app_name: str | None = Field(default=None, min_length=1)
 
     @field_validator("local_timezone")
     @classmethod
@@ -51,14 +67,26 @@ class SettingsUpdate(BaseModel):
         return value
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_role("admin", "counter"))])
 async def get_settings():
     return await get_global_settings()
 
 
-@router.patch("")
+@router.get("/timezones", dependencies=[Depends(require_role("admin"))])
+async def list_timezones():
+    """Backs the Settings page's timezone dropdown — served from Python's
+    own tzdata rather than a hand-maintained list in JS, so it can never
+    drift from what local_timezone actually accepts (see the field
+    validator above)."""
+    return _SORTED_TIMEZONES
+
+
+@router.patch("", dependencies=[Depends(require_role("admin"))])
 async def update_settings(payload: SettingsUpdate):
-    updates = payload.model_dump(exclude_unset=True, exclude={"meal_windows"})
+    updates = payload.model_dump(exclude_unset=True, exclude={"meal_windows", "unit_prices"})
+
+    if payload.unit_prices is not None:
+        updates["unit_prices"] = payload.unit_prices.model_dump()
 
     if payload.meal_windows is not None:
         # merge into existing meal_windows rather than overwriting the whole map,
