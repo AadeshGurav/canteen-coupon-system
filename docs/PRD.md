@@ -56,10 +56,11 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 ## 5. Core Concepts
 
 - **Unit, not currency.** Every member entity has three balances: `lunch`, `breakfast`, `brunch`. A scan deducts exactly one unit of the relevant type. Top-ups add units. Nothing here is a monetary wallet.
+- **No automatic resets, ever.** Balances are never reset at month-end, term-end, or on any schedule. A balance only changes because of a scan, a scan reversal, a top-up, or a refund. If a member is out of units, they're out — the only thing that changes that is a top-up (or the grace allowance, see below). This is intentional: units purchased don't expire or get wiped by the calendar.
 - **Saturday is different.** On Saturdays there is no separate breakfast/lunch — only a single **brunch** meal. Brunch is a third, independent unit type, only consumable on Saturdays.
 - **Meal windows are configurable, not hardcoded.** Breakfast, lunch, and brunch each have a start/end time. These live in a `settings` document in the database and are editable by the admin — never hardcoded constants in source.
 - **One scan per meal window.** A member cannot be scanned twice for the same meal within the same day's window. This is enforced by checking for an existing accepted, non-reversed scan within that window's time bounds — not by a separate cooldown timer — so it naturally resets each day with no scheduled job required.
-- **Grace allowance.** A member may be allowed to go negative on a balance by a configurable number of units before a hard stop, so a kid isn't turned away mid-week while a parent sorts out payment. This is a **global default in settings**, with an optional **per-member override** for exceptions the admin sets individually.
+- **Grace allowance.** A member may be allowed to go negative on a balance by a configurable number of units before a hard stop, so a kid isn't turned away mid-week while a parent sorts out payment. This is a **global default in settings**, with an optional **per-member override** for exceptions the admin sets individually. Any scan that was only possible because of the grace allowance (i.e., it pushed the balance negative) must be clearly flagged — both in the stored scan record (`via_grace`) and as a visible badge/indicator wherever scans are shown, so the admin can immediately spot who's eating on credit.
 - **Scan reversal.** If a scan was a mistake (wrong code, operator error, member changes their mind), it can be undone within a configurable window (default 10 minutes) after the scan. Reversing restores the unit and marks the scan as reversed — it does not delete the scan record (audit trail must be preserved).
 - **QR codes are permanent per member.** A member's QR/barcode value is generated once at creation and never changes. Reprinting (lost/damaged card) re-renders the same code — it never issues a new one. This prevents duplicate member entities from lost-card situations.
 
@@ -100,14 +101,21 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 - Admin can reverse a specific accepted scan within the configured reversal window.
 
 ### 6.5 Menu Planning (Admin-only)
-- Admin can log what's being served, per date, per meal type, with an audience tag (`student` / `staff` / `both`) since the two groups' menus can differ.
+- Admin manages **menu categories** as a first-class, CRUD-editable list (e.g. "Jain", "Normal", "Staff") — categories are not a fixed enum in code. Admin can add, rename, or remove categories as the canteen's offering changes.
+- Admin can log what's being served, per date, per meal type, tagged with one or more menu categories (a dish might apply to just "Jain", or to both "Normal" and "Staff").
 - This is a planning/record tool only — no student- or staff-facing view.
 
 ### 6.6 Expense & Revenue Tracking (Admin)
 - Admin can log expenses (category, description, amount, date) — groceries, tables, other overhead.
 - System should provide a simple revenue-vs-expense summary (revenue = confirmed top-ups in a date range, expenses = logged expenses in that range, profit = the difference).
 
-### 6.7 Settings (Admin)
+### 6.7 Refunds (Admin)
+- If a member leaves the school or otherwise stops using the canteen, the admin can process a refund: specify how many lunch/breakfast/brunch units are being refunded and the refund amount.
+- The **actual money movement is handled by the admin outside the app** (cash back, bank transfer, etc.) — the system's job is to keep the unit ledger accurate and to keep a record of what was refunded, when, and why.
+- Refunding deducts the specified units from the member's balance immediately. A refund cannot request more units than the member currently has.
+- This does not automatically deactivate the member — deactivation (if the member is leaving for good) is a separate action via the member's `status` field.
+
+### 6.8 Settings (Admin)
 All of the following must be stored in the database and editable at runtime — **none of this is a hardcoded constant in source**:
 - Grace allowance: enabled/disabled, and default unit count.
 - Meal windows: start/end time for breakfast, lunch, and brunch (brunch applies Saturday only).
@@ -131,9 +139,11 @@ All of the following must be stored in the database and editable at runtime — 
 See `app/schemas/` and `app/core/database.py` in the codebase for the authoritative, current schema. Summary of collections:
 
 - `member_entities` — student/staff records, balances, QR code identifier, grace override, status.
-- `scans` — one record per scan attempt's outcome, reversal state.
+- `scans` — one record per scan attempt's outcome, reversal state, and whether it was via the grace allowance (`via_grace`).
 - `topups` — one record per credit/billing transaction, payment method/status, bill + UPI QR paths.
-- `menu_log` — admin's meal planning entries.
+- `menu_log` — admin's meal planning entries, tagged with one or more menu categories.
+- `menu_categories` — admin-managed list of categories (e.g. Jain, Normal, Staff) used to tag menu entries.
+- `refunds` — one record per refund: units deducted, amount, reason, who processed it. The payout itself happens outside the app.
 - `expenses` — logged business expenses.
 - `settings` — single global document: grace allowance config, meal windows, reversal window.
 
