@@ -22,23 +22,27 @@
         <select id="refund-member" required></select>
       </div>
 
+      <p class="empty-state" id="refund-balance-hint">Pick a member to see their current balance — units below
+        start pre-filled with everything they have, so refunding "all of it" needs no typing.</p>
+
       <div class="grid grid-2">
         <div class="field">
           <label for="refund-lunch">Lunch units</label>
-          <input id="refund-lunch" type="number" value="0" min="0">
+          <input id="refund-lunch" type="number" value="0" min="0" max="0">
         </div>
         <div class="field">
           <label for="refund-breakfast">Breakfast units</label>
-          <input id="refund-breakfast" type="number" value="0" min="0">
+          <input id="refund-breakfast" type="number" value="0" min="0" max="0">
         </div>
         <div class="field">
           <label for="refund-brunch">Brunch units</label>
-          <input id="refund-brunch" type="number" value="0" min="0">
+          <input id="refund-brunch" type="number" value="0" min="0" max="0">
         </div>
-        <div class="field">
-          <label for="refund-amount">Refund amount (₹)</label>
-          <input id="refund-amount" type="number" min="0" step="0.01" required>
-        </div>
+      </div>
+
+      <div class="card" style="background:var(--bg-elevated);margin-bottom:var(--space-2);padding:var(--space-2)">
+        <label style="margin-bottom:2px">Refund amount (calculated from unit prices in Settings)</label>
+        <div style="font-size:28px;font-weight:700;color:var(--accent)" id="refund-amount-preview">₹0.00</div>
       </div>
 
       <div class="field">
@@ -49,7 +53,7 @@
         <label for="refund-processed-by">Processed by</label>
         <input id="refund-processed-by" type="text" required placeholder="Your name">
       </div>
-      <button type="submit">Record refund</button>
+      <button type="submit" id="refund-submit">Record refund</button>
     </form>
   </section>
 

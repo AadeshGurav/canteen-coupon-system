@@ -32,10 +32,11 @@
           <label for="topup-brunch">Brunch units</label>
           <input id="topup-brunch" type="number" value="0" min="0">
         </div>
-        <div class="field">
-          <label for="topup-amount">Amount (₹)</label>
-          <input id="topup-amount" type="number" min="0" step="0.01" required>
-        </div>
+      </div>
+
+      <div class="card" style="background:var(--bg-elevated);margin-bottom:var(--space-2);padding:var(--space-2)">
+        <label style="margin-bottom:2px">Amount (calculated from unit prices in Settings)</label>
+        <div style="font-size:28px;font-weight:700;color:var(--accent)" id="topup-amount-preview">₹0.00</div>
       </div>
 
       <div class="grid grid-2">
@@ -52,7 +53,7 @@
         </div>
       </div>
 
-      <button type="submit">Record top-up &amp; generate bill</button>
+      <button type="submit" id="topup-submit">Record top-up &amp; generate bill</button>
     </form>
   </section>
 
@@ -78,6 +79,17 @@
     </div>
   </section>
 </main>
+
+<dialog id="upi-qr-dialog">
+  <div class="card" style="text-align:center">
+    <h2>Scan to pay via UPI</h2>
+    <p class="empty-state" id="upi-qr-amount"></p>
+    <img id="upi-qr-image" alt="UPI payment QR code" style="width:220px;height:220px;border-radius:var(--radius-sm);background:#fff;padding:8px">
+    <div class="actions" style="justify-content:center;margin-top:var(--space-2)">
+      <button type="button" class="secondary" id="btn-close-qr">Close</button>
+    </div>
+  </div>
+</dialog>
 
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
