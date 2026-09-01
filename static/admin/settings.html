@@ -40,19 +40,30 @@
       <h2>Timezone</h2>
       <div class="field">
         <label for="local-timezone">Canteen's local timezone</label>
-        <input id="local-timezone" type="text" list="timezone-suggestions" placeholder="e.g. Asia/Kolkata">
-        <datalist id="timezone-suggestions">
-          <option value="UTC">
-          <option value="Asia/Kolkata">
-          <option value="Asia/Dubai">
-          <option value="Asia/Singapore">
-          <option value="Europe/London">
-          <option value="America/New_York">
-          <option value="America/Los_Angeles">
-        </datalist>
+        <select id="local-timezone"></select>
       </div>
-      <p class="empty-state">An IANA timezone name. Meal windows above are checked against this zone's
-        clock, not UTC — get this right or breakfast/lunch/brunch will trigger at the wrong hours.</p>
+      <p class="empty-state">Meal windows above are checked against this zone's clock, not UTC — get this
+        right or breakfast/lunch/brunch will trigger at the wrong hours.</p>
+    </section>
+
+    <section class="card">
+      <h2>Unit prices</h2>
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="price-lunch">Lunch (₹ per unit)</label>
+          <input id="price-lunch" type="number" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label for="price-breakfast">Breakfast (₹ per unit)</label>
+          <input id="price-breakfast" type="number" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label for="price-brunch">Brunch (₹ per unit)</label>
+          <input id="price-brunch" type="number" min="0" step="0.01">
+        </div>
+      </div>
+      <p class="empty-state">Top-up and refund amounts on the Top-ups &amp; Billing and Refunds pages are
+        calculated from these — never typed in by hand.</p>
     </section>
 
     <section class="card">
@@ -67,8 +78,8 @@
           <input id="upi-payee-name" type="text" placeholder="e.g. School Canteen">
         </div>
       </div>
-      <p class="empty-state">Used to generate the UPI payment QR on a UPI top-up's bill. Leave UPI ID
-        blank for a cash-only setup — no QR will be generated.</p>
+      <p class="empty-state">Used to generate the UPI payment QR, shown in a pop-up on the Top-ups &amp;
+        Billing page at the moment of payment. Leave UPI ID blank for a cash-only setup.</p>
     </section>
 
     <section class="card">
@@ -77,6 +88,15 @@
         <label for="reversal-window">Reversal window (minutes)</label>
         <input id="reversal-window" type="number" min="0">
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Branding</h2>
+      <div class="field">
+        <label for="app-name">Application name</label>
+        <input id="app-name" type="text" placeholder="e.g. Green Valley Canteen">
+      </div>
+      <p class="empty-state">Shown in the nav bar and browser tab title across this dashboard.</p>
     </section>
 
     <button type="submit">Save settings</button>
