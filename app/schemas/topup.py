@@ -9,18 +9,19 @@ class TopupCreate(BaseModel):
     lunch_units: int = Field(default=0, ge=0)
     breakfast_units: int = Field(default=0, ge=0)
     brunch_units: int = Field(default=0, ge=0)
-    amount: float = Field(ge=0)
+    # No amount field — the router computes it server-side from
+    # settings.unit_prices x units, the single source of truth for pricing.
+    # A client-supplied amount would let it drift from configured prices.
     payment_method: Literal["cash", "upi"]
     created_by: str = Field(min_length=1)
 
     @model_validator(mode="after")
-    def _reject_no_op_topup(self) -> "TopupCreate":
-        # Zero units and zero amount records a transaction that changed
-        # nothing — almost always a data-entry mistake, not an intentional
-        # top-up (docs/PRD.md §7: "every action... should have a clear,
-        # unambiguous outcome").
-        if self.amount == 0 and self.lunch_units == self.breakfast_units == self.brunch_units == 0:
-            raise ValueError("A top-up needs a non-zero amount or at least one unit.")
+    def _reject_zero_unit_topup(self) -> "TopupCreate":
+        # A top-up that credits nothing is never intentional — its entire
+        # purpose is crediting units (docs/PRD.md §7: "every action...
+        # should have a clear, unambiguous outcome").
+        if self.lunch_units == self.breakfast_units == self.brunch_units == 0:
+            raise ValueError("A top-up needs at least one unit.")
         return self
 
 

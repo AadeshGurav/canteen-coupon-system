@@ -40,25 +40,26 @@ class TestMemberTypeSpecificFields:
         validate_type_specific_fields("student", "5A", "12", None)  # no error
 
 
-class TestNoOpTransactionsAreRejected:
-    def test_zero_amount_zero_units_topup_is_rejected(self):
-        with pytest.raises(ValidationError):
-            TopupCreate(member_id="x", amount=0, payment_method="cash", created_by="a")
+class TestZeroUnitTransactionsAreRejected:
+    """amount/refund_amount are computed server-side from settings.unit_prices
+    (see app/routers/topups.py, refunds.py) — a client can no longer send
+    an amount at all, so the only thing left to validate here is that at
+    least one unit is actually being credited/refunded."""
 
-    def test_topup_with_only_units_is_accepted(self):
-        topup = TopupCreate(member_id="x", lunch_units=1, amount=0, payment_method="cash", created_by="a")
+    def test_zero_unit_topup_is_rejected(self):
+        with pytest.raises(ValidationError):
+            TopupCreate(member_id="x", payment_method="cash", created_by="a")
+
+    def test_topup_with_units_is_accepted(self):
+        topup = TopupCreate(member_id="x", lunch_units=1, payment_method="cash", created_by="a")
         assert topup.lunch_units == 1
 
-    def test_topup_with_only_amount_is_accepted(self):
-        topup = TopupCreate(member_id="x", amount=50, payment_method="cash", created_by="a")
-        assert topup.amount == 50
-
-    def test_zero_amount_zero_units_refund_is_rejected(self):
+    def test_zero_unit_refund_is_rejected(self):
         with pytest.raises(ValidationError):
-            RefundCreate(member_id="x", refund_amount=0, processed_by="a")
+            RefundCreate(member_id="x", processed_by="a")
 
-    def test_refund_with_only_units_is_accepted(self):
-        refund = RefundCreate(member_id="x", lunch_units=2, refund_amount=0, processed_by="a")
+    def test_refund_with_units_is_accepted(self):
+        refund = RefundCreate(member_id="x", lunch_units=2, processed_by="a")
         assert refund.lunch_units == 2
 
 

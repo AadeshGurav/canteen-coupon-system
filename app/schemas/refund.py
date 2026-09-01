@@ -8,16 +8,17 @@ class RefundCreate(BaseModel):
     lunch_units: int = Field(default=0, ge=0)
     breakfast_units: int = Field(default=0, ge=0)
     brunch_units: int = Field(default=0, ge=0)
-    refund_amount: float = Field(ge=0)
+    # No refund_amount field — the router computes it server-side from
+    # settings.unit_prices x units, same reasoning as TopupCreate.
     reason: str | None = None
     processed_by: str = Field(
         min_length=1
     )  # admin recording this refund; the actual payout happens outside the app
 
     @model_validator(mode="after")
-    def _reject_no_op_refund(self) -> "RefundCreate":
-        if self.refund_amount == 0 and self.lunch_units == self.breakfast_units == self.brunch_units == 0:
-            raise ValueError("A refund needs a non-zero amount or at least one unit.")
+    def _reject_zero_unit_refund(self) -> "RefundCreate":
+        if self.lunch_units == self.breakfast_units == self.brunch_units == 0:
+            raise ValueError("A refund needs at least one unit.")
         return self
 
 

@@ -43,8 +43,11 @@ def generate_bill_pdf(
     amount: float,
     payment_method: str,
     new_balances: dict,
-    upi_qr_path: str | None,
 ) -> str:
+    """The UPI payment QR is deliberately not on this bill — it's shown to
+    the admin in a dashboard modal at the moment of payment (see
+    GET /topups/{id}/upi-qr) instead, since the bill is a record of the
+    transaction and outlives the pending-payment moment the QR is for."""
     os.makedirs(settings.bills_output_dir, exist_ok=True)
     path = os.path.join(settings.bills_output_dir, f"bill_{topup_id}.pdf")
 
@@ -83,11 +86,6 @@ def generate_bill_pdf(
         f"Breakfast: {new_balances.get('breakfast', 0)}   "
         f"Brunch: {new_balances.get('brunch', 0)}",
     )
-    y -= 30
-
-    if upi_qr_path and os.path.exists(upi_qr_path):
-        c.drawString(30, y, "Scan to pay via UPI:")
-        c.drawImage(upi_qr_path, 30, y - 110, width=100, height=100)
 
     c.showPage()
     c.save()
