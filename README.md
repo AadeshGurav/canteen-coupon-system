@@ -103,6 +103,15 @@ tests/
 docs/
   PRD.md         — full product requirements (read this before building features)
   USER_GUIDE.md  — day-to-day usage doc for the admin/counter operator
+nginx/
+  nginx.conf         — gzip, security headers, rate-limit zone definitions
+  proxy_params.conf  — shared reverse-proxy headers/timeouts
+  conf.d/canteen.conf — the actual server block + rate limits, TLS notes
+Dockerfile            — multi-stage build for the app image (see "Production
+                         deployment" below)
+docker-compose.yml    — the three-container stack: nginx, app, mongo
+gunicorn_conf.py      — production ASGI process config (workers, timeouts)
+Makefile              — `make up` / `make down` / `make logs` / etc.
 ```
 
 ### Running locally
@@ -148,6 +157,109 @@ client — this is meant to be the admin's primary debugging tool when
 something goes wrong and the developer isn't the one looking at it (see
 `docs/PRD.md` §7).
 
+### Production deployment (Docker)
+
+A three-container stack — **nginx** (edge/reverse proxy) → **app** (this
+FastAPI service, run under gunicorn) → **mongo** — wired together by
+`docker-compose.yml`. One command brings the whole thing up:
+
+```bash
+make up          # copies .env.example -> .env on first run, then builds + starts everything
+```
+
+Before deploying for real, open `.env` and set a real `MONGO_ROOT_PASSWORD`
+(`openssl rand -base64 24` is a good way to generate one) and `HTTP_PORT` if
+80 is already taken on the host. Everything else has a sane default.
+
+```bash
+make logs         # follow logs from all three containers
+make ps           # container + healthcheck status
+make down         # stop and remove containers (volumes/data are kept)
+```
+
+Then, from any device on the local network:
+- Scanner: `http://<host>:<HTTP_PORT>/static/scanner.html`
+- Admin dashboard: `http://<host>:<HTTP_PORT>/static/admin/index.html`
+
+#### Network topology
+
+```
+                 ┌──────────┐
+   host:80  ───▶ │  nginx   │
+                 └────┬─────┘
+                      │ edge network
+                 ┌────┴─────┐
+                 │   app    │
+                 └────┬─────┘
+                      │ internal network
+                 ┌────┴─────┐
+                 │  mongo   │
+                 └──────────┘
+```
+
+Two separate bridge networks, not one flat one:
+- **`edge`** — nginx ↔ app only. `app` has no `ports:` entry, so it's
+  reachable only through nginx, never directly from the host.
+- **`internal`** — app ↔ mongo only, declared `internal: true`. Docker gives
+  this network no outbound route at all; nginx never joins it. Even if the
+  app container were compromised, this is the standard "database only
+  reachable from the one service that needs it" isolation, not just a
+  host-firewall rule that could be misconfigured.
+
+Only nginx publishes a port to the host (`${HTTP_PORT:-80}`).
+
+#### Images and why
+
+- **App image:** multi-stage build on `python:3.12-slim-bookworm` — a
+  builder stage with `build-essential` (for any Pillow/reportlab
+  dependency that doesn't ship a prebuilt wheel for the host architecture)
+  produces a venv that's copied, alone, into a compiler-free final stage.
+  Runs as a non-root user, ships a stdlib-only `HEALTHCHECK` (no curl/wget
+  added just for that). Alpine would be smaller but risks slow/broken
+  builds for Pillow's native dependencies on musl libc — `slim` is the
+  better size/reliability trade-off for this stack.
+- **nginx:** `nginx:1.27-alpine` — no compiled dependencies of its own, so
+  alpine's size wins outright here.
+- **mongo:** the official `mongo:7` image, unmodified.
+
+#### What's in nginx
+
+`nginx/nginx.conf` + `nginx/conf.d/canteen.conf`: gzip, security headers
+(`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`), and two
+separate rate-limit zones — a generous one for the admin dashboard, and a
+tighter one specifically on `/scan`, since that endpoint is machine-driven
+(one call per QR read) and a burst there is more likely a stuck retry than
+a real user. `nginx/conf.d/canteen.conf` documents how to add TLS (mount a
+cert/key, add a `listen 443 ssl` server block) when this needs to leave a
+fully trusted LAN.
+
+#### Volumes (survive `make down`, removed only by `docker compose down -v`)
+
+| Volume | What |
+|---|---|
+| `mongo_data` | The database itself |
+| `bills_data` | Generated PDF bills (`generated_bills/`) |
+| `qr_data` | Generated QR/UPI images (`generated_qr/`) |
+| `app_logs` | `logs/app.log` — the same rotating log described above, now persisted across container restarts/rebuilds |
+
+#### Updating
+
+```bash
+git pull
+docker compose up -d --build   # rebuilds only the app image; mongo/nginx are untouched
+```
+
+Each service has a `HEALTHCHECK`, and `depends_on: condition: service_healthy`
+means app won't start serving until mongo is actually ready, and nginx won't
+start routing until the app is — no manual "wait and retry" step needed on a
+fresh `make up`.
+
+#### Still not covered here
+
+Docker isolates the network path, but it doesn't add authentication to the
+app itself — see "Not yet built" below. Don't put this stack on the open
+internet without addressing that first, Docker networking or not.
+
 ### Key design decisions
 
 - **Meal windows are configurable, not hardcoded.** Breakfast/lunch/brunch start
@@ -185,7 +297,9 @@ something goes wrong and the developer isn't the one looking at it (see
 ### Not yet built (flagged for a later pass — see `docs/PRD.md` §9)
 
 - Auth for the admin endpoints (currently open — fine for a LAN-only pilot, but
-  must be locked down before any handoff or exposure beyond the local network).
+  must be locked down before any handoff or exposure beyond the local network;
+  the Docker network isolation described above narrows *who can reach the
+  app* but doesn't add a login to the app itself).
 - Elasticsearch-backed searchable action log (scans/top-ups currently live only
   in MongoDB; planned once the core flow is validated in the pilot).
 - WhatsApp bill delivery (explicitly deferred).
