@@ -24,8 +24,10 @@ around.
 ### 2.1 Accessing the system
 On the canteen laptop (or any device on the same local network), open a
 browser to:
-- **Admin dashboard:** `http://<host-device-ip-or-dns-name>:8000/static/admin/index.html`
-- **Counter scanner:** `http://<host-device-ip-or-dns-name>:8000/static/scanner.html`
+- **Admin dashboard:** `http://<host-device-ip-or-dns-name>/static/admin/index.html`
+- **Counter scanner:** `https://<host-device-ip-or-dns-name>/static/scanner.html`
+  — **must** be `https://`, not `http://` (see §2.3 below) — the camera
+  simply won't work otherwise, on any device.
 
 Bookmark both — the dashboard has a nav bar at the top linking to every page
 you have access to (Members, Top-ups & Billing, Scan Log, Menu Planning,
@@ -46,6 +48,48 @@ If you forget a password, an admin can reset it from the **Users** page —
 there's no self-service "forgot password" flow, by design, since this isn't
 an internet-facing product with an email/SMS channel to send a reset link
 through.
+
+### 2.3 Enabling the camera scanner (one-time per device)
+
+Phone browsers only allow camera access on a page loaded securely (HTTPS) —
+this is a browser rule, not something this app can work around, and it
+applies even though everything stays on your own local network with no
+internet involved. If you open the scanner over plain `http://` the camera
+button won't do anything, no matter how many times you tap it or grant
+permission — the browser never even asks.
+
+**One-time setup, done once on the host machine (laptop):**
+1. Run `make tls-setup` (see the README) — this generates a certificate and
+   prints the location of a file called `rootCA.pem`.
+2. Get that file onto each phone that will use the scanner — AirDrop,
+   email it to yourself, a USB cable, or a shared drive all work.
+
+**Then, once per phone, install and trust it:**
+
+**iPhone (iOS):**
+1. Open the `rootCA.pem` file on the phone (e.g. from the Files app or an
+   email attachment) — this prompts to install a configuration profile.
+2. Settings → General → VPN & Device Management → tap the downloaded
+   profile → **Install** (enter your passcode if asked).
+3. Still in Settings → General → About → scroll to the bottom →
+   **Certificate Trust Settings** → turn on full trust for the certificate
+   you just installed. This last step is easy to miss — without it, the
+   certificate is installed but Safari still won't trust it.
+
+**Android:**
+1. Copy `rootCA.pem` onto the phone.
+2. Settings → Security (or Security & Privacy) → Encryption & credentials →
+   **Install a certificate** → **CA certificate**.
+3. Confirm the warning about trusting a user-installed certificate, then
+   select the `rootCA.pem` file.
+4. Android will show a persistent "Network may be monitored" notification
+   whenever a user-installed CA is active — this is normal and expected for
+   any manually trusted certificate, not a sign of a problem.
+
+No rooting or jailbreaking is needed on either platform for this. Once
+installed, `https://<hostname>.local/static/scanner.html` should load
+without a certificate warning, and the camera prompt should appear
+normally.
 
 ## 3. Admin: managing members (students & staff)
 
@@ -119,11 +163,11 @@ link that opens the original PDF.
 ## 5. Scanning
 
 ### 5.1 Opening the scanner
-Open `http://<host>:8000/static/scanner.html` on the counter phone's browser
-and sign in with a scanner, counter, or admin account (§2.2) — this device
-stays signed in afterward, so this is only needed once per phone/browser,
-not once per meal. Allow camera access and leave it open for the whole meal
-period.
+Open `https://<host>/static/scanner.html` (must be `https://` — see §2.3) on
+the counter phone's browser and sign in with a scanner, counter, or admin
+account (§2.2) — this device stays signed in afterward, so this is only
+needed once per phone/browser, not once per meal. Allow camera access and
+leave it open for the whole meal period.
 
 ### 5.2 Reading the result
 - **Green / accepted** — meal confirmed, hand over the meal. A yellow
@@ -297,20 +341,42 @@ since MongoDB only applies it the very first time. Two ways out:
   and then bring it back up — it'll reinitialize cleanly against
   whatever's in `.env` now.
 
+### The camera doesn't work / the "Enable camera" button does nothing
+
+By far the most common cause: the scanner was opened over `http://` instead
+of `https://`. Browsers only allow camera access on a securely-loaded page,
+and that rule applies even on a private, fully offline LAN — over plain
+HTTP, the camera permission prompt never appears at all, no matter how many
+times the button is tapped. Check the address bar: it needs to say
+`https://`, and the device needs to have the certificate installed and
+trusted (§2.3) or it'll show a warning instead of the scanner. Set this up
+once with `make tls-setup` (see the README) plus the one-time per-device
+steps in §2.3.
+
+If it's already `https://` with a trusted certificate and the camera still
+won't start, check the error message shown on screen:
+- **"Camera access was blocked"** — the site's camera permission was denied
+  at some point. Fix it in the browser's site settings for this page
+  (usually the (i) or lock icon next to the address bar), then reload.
+- **"No camera was found"** — a hardware/OS issue on that device, not this
+  app.
+- **A generic "couldn't access the camera"** — often another app (or
+  another browser tab) is actively using the camera; close it and tap
+  **Enable camera** again.
+
 ### The scanner keeps asking for camera permission every time the page loads
 
-The scanner now checks camera permission on load and shows a clear "Enable
-camera" button instead of silently retrying — if it's still asking every
-time even after tapping that and allowing access, the most common cause is
-an **unstable IP address**: a browser's permission grant is tied to the
-exact address the page was loaded from (e.g. `http://192.168.1.42/...`),
+The scanner checks camera permission on load and shows a clear "Enable
+camera" button instead of silently retrying — if permission was already
+granted and it's still asking every time, the cause is usually an
+**unstable address**: a browser's permission grant is tied to the exact
+origin the page was loaded from (`https://192.168.1.42/...`, port and all),
 and phones on a hotspot/router often get handed a *different* IP address
-every time they reconnect, which looks like a brand new site to the
-browser each time — so it forgets the earlier grant. If the scanner phone
-is on the same network as the host machine, set up the optional stable
-hostname (`make mdns-setup`, documented in the README) and access the
-scanner via that `<name>.local` address instead of a raw IP — a stable
-address means a stable permission grant.
+every time they reconnect, which looks like a brand new site to the browser
+each time — so it forgets the earlier grant. Access the scanner via the
+stable `https://<name>.local` address (`make mdns-setup`, documented in the
+README) instead of a raw IP — a stable address means a stable permission
+grant.
 
 ### Admin login shows up on a device I didn't expect
 
