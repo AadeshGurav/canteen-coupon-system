@@ -197,6 +197,36 @@ Set `MDNS_HOSTNAME` in `.env` first if `canteen` isn't the name you want
 support mDNS resolution (macOS/iOS out of the box; Android 12+ natively;
 Windows needs Bonjour Print Services installed separately).
 
+### Required for the scanner's camera: local TLS (mkcert)
+
+Browsers only allow camera access (`getUserMedia`, which the scanner page
+needs) in a **secure context** — HTTPS, or literally `localhost` — and this
+rule applies even on a fully private, offline LAN. Served over plain
+`http://canteen.local`, the scanner's camera permission prompt never
+appears at all; `navigator.mediaDevices` is simply `undefined` on an
+insecure origin, so it fails before the browser would even ask.
+
+`make tls-setup` generates a locally-trusted certificate via
+[mkcert](https://github.com/FiloSottile/mkcert) and activates nginx's
+`:443` server block:
+
+```bash
+make tls-setup              # asks before installing anything; supports --yes
+docker compose restart nginx    # (or `make restart`) to pick up the new cert
+```
+
+The cert covers `<MDNS_HOSTNAME>.local`, this machine's current LAN IP, and
+`localhost` in one go. This machine trusts it automatically
+(`mkcert -install`); every *other* device (the scanning phones) needs the
+generated root CA — `nginx/certs/rootCA.pem` — installed once, which needs
+no root/jailbreak on either iOS or Android. See
+[`docs/USER_GUIDE.md` §2.3](docs/USER_GUIDE.md) for those exact steps.
+
+Once set up, use `https://` (not `http://`) for the scanner specifically —
+the admin dashboard still works fine over plain `:80` for devices that
+haven't installed the CA yet, but the camera itself requires HTTPS on
+whatever device is doing the scanning.
+
 ### Running tests
 
 ```bash
@@ -255,9 +285,15 @@ instead of the canteen's own clock.
 
 ```bash
 make logs         # follow logs from all three containers
-make ps           # container + healthcheck status
-make down         # stop and remove containers (volumes/data are kept)
+make ps            # container + healthcheck status
+make start         # bring the stack back up without rebuilding (fast — use
+                    # this over `make up` when no code has changed, e.g.
+                    # after a reboot or `make down`)
+make down          # stop and remove containers (volumes/data are kept)
 ```
+
+**Then run `make tls-setup`** (see the next section) before relying on the
+scanner page — without it, the camera simply won't work, on any device.
 
 Then, from any device on the local network:
 - Scanner: `http://<host>:<HTTP_PORT>/static/scanner.html`
@@ -315,9 +351,10 @@ Only nginx publishes a port to the host (`${HTTP_PORT:-80}`).
 separate rate-limit zones — a generous one for the admin dashboard, and a
 tighter one specifically on `/scan`, since that endpoint is machine-driven
 (one call per QR read) and a burst there is more likely a stuck retry than
-a real user. `nginx/conf.d/canteen.conf` documents how to add TLS (mount a
-cert/key, add a `listen 443 ssl` server block) when this needs to leave a
-fully trusted LAN.
+a real user. `locations.inc` holds the actual routing, shared by both the
+`:80` block in `canteen.conf` and the `:443` block that `make tls-setup`
+activates (see above) — TLS isn't an internet-only concern here, it's what
+makes the scanner's camera work at all, even fully offline on a LAN.
 
 #### Volumes (survive `make down`, removed only by `docker compose down -v`)
 
@@ -345,9 +382,10 @@ fresh `make up`.
 Docker isolates the network path; the app itself now also requires a login
 (see "Key design decisions" below) for every route except the health check
 and the public branding endpoint the login page needs before a session
-exists. Still don't put this stack on the open internet without adding TLS
-(see `nginx/conf.d/canteen.conf`) first — auth alone isn't a substitute for
-encrypting credentials in transit.
+exists. `make tls-setup` (above) covers TLS for the LAN itself — if this
+ever needs to leave a fully trusted LAN and face the open internet, that's
+a different, larger step (a real publicly-trusted certificate, not a local
+mkcert one) that isn't covered here yet.
 
 ### CI/CD
 
