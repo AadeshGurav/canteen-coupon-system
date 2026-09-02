@@ -59,10 +59,14 @@ services:
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/proxy_params.conf:/etc/nginx/proxy_params.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # Empty (and 443 unused) until `make tls-setup` generates a cert —
+      # see nginx/conf.d/canteen-tls.conf.example.
+      - ./nginx/certs:/etc/nginx/certs:ro
     networks:
       - edge
     depends_on:
