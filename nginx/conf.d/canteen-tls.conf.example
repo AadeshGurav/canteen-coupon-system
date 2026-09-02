@@ -1,0 +1,25 @@
+# Activated by `make tls-setup` (scripts/setup_tls.sh), which copies this
+# file to canteen-tls.conf (dropping the .example suffix) once
+# nginx/certs/tls.pem + tls-key.pem actually exist. Left as .example here so
+# a fresh checkout with no certs generated yet behaves exactly like a
+# TLS-less setup — nginx never references a cert file that isn't there.
+#
+# Fixed filenames on purpose (not tied to MDNS_HOSTNAME or any one hostname):
+# the cert itself carries whatever hostnames/IPs were passed to mkcert as
+# Subject Alternative Names, so one cert can cover canteen.local, the
+# current LAN IP, and localhost at once — see scripts/setup_tls.sh.
+
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/tls.pem;
+    ssl_certificate_key /etc/nginx/certs/tls-key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    include /etc/nginx/conf.d/locations.inc;
+}
