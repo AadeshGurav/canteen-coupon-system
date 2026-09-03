@@ -24,16 +24,22 @@ theme is [`docs/THEME_SPEC.md`](docs/THEME_SPEC.md) (PRD §14).
 ## Requirements
 
 - Flutter SDK ≥ 3.24 (Dart ≥ 3.5)
-- Android SDK + a JDK 17 for building the APK (`flutter doctor` will tell you
-  what's missing)
-- An Android device or emulator to run it
+- **Android:** Android SDK + JDK 17 (`flutter doctor` lists what's missing);
+  an Android device or emulator.
+- **iOS** (client mode; host is Android-first, PRD §13.8): a Mac with the
+  full **Xcode** app + **CocoaPods** (`brew install cocoapods`), and an
+  Apple ID for signing. `ios/` is scaffolded and configured (camera, local
+  network + Bonjour `_canteen._tcp`, ATS local networking). Open
+  `ios/Runner.xcworkspace` in Xcode, set your Team + a unique bundle id,
+  then `flutter run`.
 
 ## Setup
 
 ```bash
 make setup      # flutter pub get + codegen (drift / riverpod / l10n)
-make run        # run on a connected device
+make run        # run on a connected device (Android or iOS)
 make apk        # release APK  ->  build/app/outputs/flutter-apk/
+make ios        # release .app (needs Xcode) -> build/ios/iphoneos/
 ```
 
 `make setup` runs `build_runner`, which generates the files git ignores

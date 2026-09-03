@@ -12,6 +12,7 @@ analyzer:
     - "lib/l10n/**"
     - build/**
     - android/**
+    - ios/**
 
 linter:
   rules:

@@ -64,3 +64,22 @@ jobs:
         with:
           name: canteen-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  build-ios:
+    name: Build iOS (no codesign)
+    runs-on: macos-14
+    needs: analyze-test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart run build_runner build
+
+      # Compiles the whole iOS app + pods; skips signing (no certs in CI).
+      - run: flutter build ios --release --no-codesign

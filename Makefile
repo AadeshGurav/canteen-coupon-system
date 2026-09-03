@@ -1,4 +1,4 @@
-.PHONY: setup gen watch run apk analyze test format clean doctor
+.PHONY: setup gen watch run apk ios analyze test format clean doctor
 
 # Zero-touch setup (CLAUDE.md §9): one command from a fresh checkout to a
 # runnable app.
@@ -22,6 +22,10 @@ run:
 # Build the release APK (PRD §13.8: Android only for v1).
 apk:
 	flutter build apk --release
+
+# Build the iOS app (needs full Xcode + CocoaPods). Signing is set in Xcode.
+ios:
+	flutter build ios --release
 
 analyze:
 	dart analyze --fatal-infos
