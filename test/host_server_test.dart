@@ -121,6 +121,38 @@ void main() {
     expect((member.json['balances'] as Map)['lunch'], 3);
   });
 
+  test('grace allowance lets a zero balance go negative, then hard-stops',
+      () async {
+    await _send(http, 'PATCH', '$base/api/settings', token: adminToken, body: {
+      'graceAllowanceEnabled': true,
+      'graceAllowanceUnits': 1,
+      'mealWindows': {
+        'breakfast': {'start': '00:00', 'end': '00:01'},
+        'brunch': {'start': '00:00', 'end': '00:01'},
+        'lunch': {'start': '00:02', 'end': '23:59'},
+      },
+    });
+    final m = await _send(http, 'POST', '$base/api/members',
+        token: adminToken, body: {'type': 'staff', 'name': 'Ravi', 'staffId': 'S1'});
+    final qr = m.json['qrCodeId'] as String;
+
+    // Balance 0, grace 1 → scan accepted on grace, flagged, balance → -1.
+    final onGrace = await _send(http, 'POST', '$base/api/scan',
+        token: adminToken, body: {'qrCodeId': qr});
+    expect(onGrace.json['outcome'], 'accepted');
+    expect(onGrace.json['viaGrace'], true);
+    expect(onGrace.json['remainingBalance'], -1);
+
+    // A second member with grace OFF and a zero balance → hard stop.
+    await _send(http, 'PATCH', '$base/api/settings',
+        token: adminToken, body: {'graceAllowanceEnabled': false});
+    final m2 = await _send(http, 'POST', '$base/api/members', token: adminToken,
+        body: {'type': 'staff', 'name': 'Sita', 'staffId': 'S2'});
+    final stop = await _send(http, 'POST', '$base/api/scan', token: adminToken,
+        body: {'qrCodeId': m2.json['qrCodeId']});
+    expect(stop.json['outcome'], 'rejected_zero_balance');
+  });
+
   test('unknown QR code is rejected with a clear outcome', () async {
     final res = await _send(http, 'POST', '$base/api/scan',
         token: adminToken, body: {'qrCodeId': 'nope-nope-nope'});
