@@ -147,6 +147,20 @@ class MemberPatch {
     this.graceAllowanceOverride = const _Unset(),
   });
 
+  /// Builds a patch from a request body. `graceAllowanceOverride` is only
+  /// touched when the key is actually present, so a PATCH can clear it (send
+  /// null) or leave it alone (omit it).
+  factory MemberPatch.fromJson(Map<String, dynamic> j) => MemberPatch(
+        name: j['name'] as String?,
+        className: j['className'] as String?,
+        rollNumber: j['rollNumber'] as String?,
+        staffId: j['staffId'] as String?,
+        status: j['status'] as String?,
+        graceAllowanceOverride: j.containsKey('graceAllowanceOverride')
+            ? j['graceAllowanceOverride'] as int?
+            : const _Unset(),
+      );
+
   final String? name;
   final String? className;
   final String? rollNumber;

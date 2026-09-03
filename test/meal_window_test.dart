@@ -10,18 +10,20 @@ void main() {
   setUpAll(tzdata.initializeTimeZones);
 
   final windows = {
-    'breakfast': MealWindow(start: const HhMm(7, 0), end: const HhMm(9, 30)),
-    'lunch': MealWindow(start: const HhMm(12, 0), end: const HhMm(14, 30)),
-    'brunch': MealWindow(start: const HhMm(9, 0), end: const HhMm(12, 0)),
+    'breakfast': const MealWindow(start: HhMm(7, 0), end: HhMm(9, 30)),
+    'lunch': const MealWindow(start: HhMm(12, 0), end: HhMm(14, 30)),
+    'brunch': const MealWindow(start: HhMm(9, 0), end: HhMm(12, 0)),
   };
 
   tz.TZDateTime at(int year, int month, int day, int hour, int minute) =>
-      tz.TZDateTime(tz.getLocation('Asia/Kolkata'), year, month, day, hour, minute);
+      tz.TZDateTime(
+          tz.getLocation('Asia/Kolkata'), year, month, day, hour, minute);
 
   group('currentMealType', () {
     test('resolves breakfast inside its window on a weekday', () {
       // 2026-09-03 is a Thursday.
-      expect(currentMealType(at(2026, 9, 3, 8, 0), windows), MealType.breakfast);
+      expect(
+          currentMealType(at(2026, 9, 3, 8, 0), windows), MealType.breakfast);
     });
 
     test('is null between windows', () {
@@ -34,9 +36,11 @@ void main() {
 
     test('on Saturday only brunch applies, never breakfast/lunch', () {
       // 2026-09-05 is a Saturday.
-      expect(currentMealType(at(2026, 9, 5, 8, 0), windows), isNull); // would be breakfast on a weekday
+      expect(currentMealType(at(2026, 9, 5, 8, 0), windows),
+          isNull); // would be breakfast on a weekday
       expect(currentMealType(at(2026, 9, 5, 10, 0), windows), MealType.brunch);
-      expect(currentMealType(at(2026, 9, 5, 13, 0), windows), isNull); // would be lunch on a weekday
+      expect(currentMealType(at(2026, 9, 5, 13, 0), windows),
+          isNull); // would be lunch on a weekday
     });
   });
 

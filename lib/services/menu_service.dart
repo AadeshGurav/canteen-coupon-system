@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../core/errors.dart';
+import '../core/sentinels.dart';
 import '../data/local/database.dart' hide MenuCategory, MenuEntry;
 import '../data/local/mappers.dart';
 import '../domain/menu.dart';
@@ -53,11 +54,11 @@ class MenuService {
   Future<MenuCategory> updateCategory(
     int id, {
     String? name,
-    Object? description = _unset,
+    Object? description = kUnset,
   }) async {
     final companion = MenuCategoriesCompanion(
       name: name == null ? const Value.absent() : Value(name),
-      description: identical(description, _unset)
+      description: identical(description, kUnset)
           ? const Value.absent()
           : Value(description as String?),
       updatedAt: Value(DateTime.now().toUtc()),
@@ -148,5 +149,4 @@ class MenuService {
 
   bool _isUnique(Exception e) => e.toString().toLowerCase().contains('unique');
 
-  static const Object _unset = Object();
 }
