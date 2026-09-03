@@ -49,7 +49,8 @@ class ApiClient {
 
   /// Raw bytes (bill PDF, QR image).
   Future<List<int>> getBytes(String path) async {
-    final response = await _guarded(() => _http.get(_uri(path), headers: _headers));
+    final response =
+        await _guarded(() => _http.get(_uri(path), headers: _headers));
     _throwForStatus(response);
     return response.bodyBytes;
   }

@@ -38,7 +38,8 @@ class Ingredient {
 /// One line of a recipe: an ingredient plus a free-text quantity note (PRD
 /// §6.5.1 — deliberately not a precise per-serving model).
 class RecipeIngredient {
-  const RecipeIngredient({required this.ingredientId, required this.quantityNote});
+  const RecipeIngredient(
+      {required this.ingredientId, required this.quantityNote});
 
   factory RecipeIngredient.fromJson(Map<String, dynamic> j) => RecipeIngredient(
         ingredientId: j['ingredientId'] as int,

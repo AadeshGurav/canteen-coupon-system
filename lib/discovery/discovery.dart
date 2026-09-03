@@ -7,7 +7,8 @@ import '../core/logging.dart';
 
 /// A host found on the LAN (PRD §13.5).
 class DiscoveredHost {
-  const DiscoveredHost({required this.name, required this.host, required this.port});
+  const DiscoveredHost(
+      {required this.name, required this.host, required this.port});
 
   final String name;
   final String host;

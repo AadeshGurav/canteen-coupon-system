@@ -16,6 +16,7 @@ import '../domain/ops.dart';
 import '../server/host_container.dart';
 import '../server/server.dart';
 import 'bootstrap.dart';
+export 'bootstrap.dart' show appModeStoreProvider, sharedPreferencesProvider;
 
 /// The chosen mode for this launch. `null` means "not chosen yet" → the mode
 /// picker. Writing it (or clearing it) invalidates this provider.

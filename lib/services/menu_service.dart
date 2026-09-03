@@ -148,5 +148,4 @@ class MenuService {
   DateTime _dateOnly(DateTime d) => DateTime.utc(d.year, d.month, d.day);
 
   bool _isUnique(Exception e) => e.toString().toLowerCase().contains('unique');
-
 }

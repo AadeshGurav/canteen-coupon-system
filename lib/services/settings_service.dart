@@ -219,8 +219,7 @@ class SettingsPatch {
         if (reversalWindowMinutes != null)
           'reversalWindowMinutes': reversalWindowMinutes,
         if (mealWindows != null)
-          'mealWindows':
-              mealWindows!.map((k, v) => MapEntry(k, v.toJson())),
+          'mealWindows': mealWindows!.map((k, v) => MapEntry(k, v.toJson())),
         if (localTimezone != null) 'localTimezone': localTimezone,
         if (upiId != null) 'upiId': upiId,
         if (upiPayeeName != null) 'upiPayeeName': upiPayeeName,

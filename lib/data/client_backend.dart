@@ -68,7 +68,8 @@ class ClientBackend implements Backend {
 
   @override
   Future<SettingsSnapshot> updateSettings(SettingsPatch patch) async =>
-      SettingsSnapshot.fromJson(_obj(await _api.patchJson('/settings', patch.toJson())));
+      SettingsSnapshot.fromJson(
+          _obj(await _api.patchJson('/settings', patch.toJson())));
 
   // ---- members ----------------------------------------------
   @override
@@ -122,27 +123,30 @@ class ClientBackend implements Backend {
   Future<void> deleteMember(int id) => _api.deleteJson('/members/$id');
 
   @override
-  Future<Member> creditMember(int id, UnitCounts units) async => Member.fromJson(
-      _obj(await _api.postJson('/members/$id/credit', units.toJson())));
+  Future<Member> creditMember(int id, UnitCounts units) async =>
+      Member.fromJson(
+          _obj(await _api.postJson('/members/$id/credit', units.toJson())));
 
   @override
   Future<List<int>> memberQrPng(int id) => _api.getBytes('/members/$id/qr');
 
   // ---- scanning -------------------------------------------
   @override
-  Future<ScanResult> scan(String qrCodeId, {MealType? mealTypeOverride}) async =>
+  Future<ScanResult> scan(String qrCodeId,
+          {MealType? mealTypeOverride}) async =>
       ScanResult.fromJson(_obj(await _api.postJson('/scan', {
         'qrCodeId': qrCodeId,
-        if (mealTypeOverride != null)
-          'mealTypeOverride': mealTypeOverride.wire,
+        if (mealTypeOverride != null) 'mealTypeOverride': mealTypeOverride.wire,
       })));
 
   @override
-  Future<ReversalResult> reverseScan(int scanId) async => ReversalResult.fromJson(
-      _obj(await _api.postJson('/scan/reverse', {'scanId': scanId})));
+  Future<ReversalResult> reverseScan(int scanId) async =>
+      ReversalResult.fromJson(
+          _obj(await _api.postJson('/scan/reverse', {'scanId': scanId})));
 
   @override
-  Future<List<ScanRecord>> recentScans({int? memberId, int limit = 200}) async =>
+  Future<List<ScanRecord>> recentScans(
+          {int? memberId, int limit = 200}) async =>
       _list(
         await _api.getJson('/scans', query: {
           if (memberId != null) 'memberId': memberId,
@@ -174,7 +178,8 @@ class ClientBackend implements Backend {
   Future<List<int>> topupBillPdf(int id) => _api.getBytes('/topups/$id/bill');
 
   @override
-  Future<List<int>> topupUpiQrPng(int id) => _api.getBytes('/topups/$id/upi-qr');
+  Future<List<int>> topupUpiQrPng(int id) =>
+      _api.getBytes('/topups/$id/upi-qr');
 
   // ---- refunds ---------------------------------------
   @override
@@ -195,7 +200,8 @@ class ClientBackend implements Backend {
       _list(await _api.getJson('/menu-categories'), MenuCategory.fromJson);
 
   @override
-  Future<MenuCategory> createMenuCategory(String name, String? description) async =>
+  Future<MenuCategory> createMenuCategory(
+          String name, String? description) async =>
       MenuCategory.fromJson(_obj(await _api.postJson('/menu-categories', {
         'name': name,
         'description': description,
@@ -219,8 +225,7 @@ class ClientBackend implements Backend {
 
   @override
   Future<List<MenuEntry>> listMenu({DateTime? start, DateTime? end}) async =>
-      _list(
-          await _api.getJson('/menu', query: _range(start, end)),
+      _list(await _api.getJson('/menu', query: _range(start, end)),
           MenuEntry.fromJson);
 
   @override
@@ -340,8 +345,8 @@ class ClientBackend implements Backend {
       AppUser.fromJson(_obj(await _api.postJson('/users', draft.toJson())));
 
   @override
-  Future<AppUser> updateUser(int id, UserPatch patch) async =>
-      AppUser.fromJson(_obj(await _api.patchJson('/users/$id', patch.toJson())));
+  Future<AppUser> updateUser(int id, UserPatch patch) async => AppUser.fromJson(
+      _obj(await _api.patchJson('/users/$id', patch.toJson())));
 
   @override
   Future<void> deleteUser(int id) => _api.deleteJson('/users/$id');
