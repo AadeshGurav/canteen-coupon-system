@@ -124,7 +124,9 @@ class SettingsService {
 
   Value<double> _valPrice(double? v) {
     if (v == null) return const Value.absent();
-    if (v < 0) throw const ValidationException('Unit price cannot be negative.');
+    if (v < 0) {
+      throw const ValidationException('Unit price cannot be negative.');
+    }
     return Value(v);
   }
 
