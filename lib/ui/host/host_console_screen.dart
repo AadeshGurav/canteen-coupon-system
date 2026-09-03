@@ -1,4 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -23,6 +27,21 @@ class HostConsoleScreen extends ConsumerStatefulWidget {
 class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
   bool _busy = false;
   String? _certExpiry;
+
+  @override
+  void initState() {
+    super.initState();
+    // Self-heal: if the keep-alive service is still running (e.g. an OEM ROM
+    // killed and restarted the app process mid-shift), bring the server back
+    // up automatically so the console's state matches reality.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || ref.read(hostRunningProvider)) return;
+      if (await FlutterForegroundTask.isRunningService) {
+        final container = await ref.read(hostContainerProvider.future);
+        if (mounted) await _startServer(container.artifacts.baseDir);
+      }
+    });
+  }
 
   Future<void> _startServer(String documentsDir) async {
     setState(() => _busy = true);
@@ -158,10 +177,7 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
                                         style: NbType.body)
                                   ]
                                 : [
-                                    for (final u in urls)
-                                      SelectableText(u,
-                                          style: NbType.body.copyWith(
-                                              fontWeight: FontWeight.w700)),
+                                    for (final u in urls) _CopyableUrl(url: u),
                                   ],
                           ),
                           orElse: () => const SizedBox.shrink(),
@@ -231,6 +247,54 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
                         ),
                       ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A LAN URL that copies to the clipboard on tap, with a cheerful confirmation
+/// (the operator will do this a lot — reward the tap, Peak-End Rule).
+class _CopyableUrl extends StatelessWidget {
+  const _CopyableUrl({required this.url});
+
+  final String url;
+
+  static const _quips = [
+    'Yoinked! It is on your clipboard now. 📋',
+    'Copied. Paste it like it is hot. 🔥',
+    'URL beamed to your clipboard. 🛸',
+    'Snatched. Ctrl+V is your friend now. ✌️',
+    'Got it. Go forth and paste. 📎',
+    'Clipboard: fed. You: welcome. 🍽️',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: url));
+        if (context.mounted) {
+          showNbSnack(context, _quips[Random().nextInt(_quips.length)]);
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: NbSpace.xs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                url,
+                style: NbType.body.copyWith(
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(width: NbSpace.xs),
+            const Icon(Icons.copy, size: 16, color: NbColors.ink),
           ],
         ),
       ),
