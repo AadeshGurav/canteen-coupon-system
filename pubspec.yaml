@@ -10,10 +10,13 @@ environment:
   sdk: ">=3.5.0 <4.0.0"
   flutter: ">=3.24.0"
 
-# Version constraints follow PRD §13.3 verbatim where it pinned one. The PRD's
-# own instruction is to run `flutter pub outdated` at build time and bump
-# deliberately (CLAUDE.md §10) — not to re-decide the package choices, which
-# §13.3 settled.
+# PRD §13.3 settled the package *choices*; its version numbers were "current as
+# of that research pass" and it directs an explicit bump at build time
+# (CLAUDE.md §10 "know why an upgrade is happening"). The why here: this build
+# runs on Dart 3.13, whose dot-shorthand syntax the analyzer pulled in by the
+# 2024-era pins (drift 2.21 / riverpod 2.6 / build_runner 2.4) cannot parse —
+# codegen crashes in the analyzer's summary linker. Bumped to the current
+# stable line of each; the choices are unchanged.
 dependencies:
   flutter:
     sdk: flutter
@@ -21,8 +24,8 @@ dependencies:
     sdk: flutter
 
   # --- State management / DI (PRD §13.3) ---
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  flutter_riverpod: ^3.4.2
+  riverpod_annotation: ^4.0.6
 
   # --- Embedded HTTP server, host mode only (PRD §13.3, §13.4) ---
   shelf: ^1.4.2
@@ -30,7 +33,7 @@ dependencies:
   shelf_static: ^1.1.2
 
   # --- On-device database, host mode only (PRD §13.3) ---
-  drift: ^2.21.0
+  drift: ^2.34.4
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.4
   path: ^1.9.0
@@ -49,7 +52,7 @@ dependencies:
   # --- Self-signed TLS cert for the desktop-admin surface (PRD §13.6) ---
   #  Native Dart key/cert generation — no mkcert, no shelling out.
   basic_utils: ^5.8.1
-  pointycastle: ^3.9.1
+  pointycastle: ^4.0.0
 
   # --- Host server as an Android foreground service (PRD §13.3) ---
   #  EXACT pin, not a caret: §13.3 flags a reported CDN hash mismatch on a
@@ -69,21 +72,22 @@ dependencies:
   shared_preferences: ^2.3.2
   crypto: ^3.0.5
   collection: ^1.18.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   logging: ^1.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  build_runner: ^2.4.13
-  drift_dev: ^2.21.0
-  riverpod_generator: ^2.6.1
-  custom_lint: ^0.7.0
-  riverpod_lint: ^2.6.1
+  build_runner: ^2.16.1
+  drift_dev: ^2.34.6
+  riverpod_generator: ^4.0.8
+  # custom_lint / riverpod_lint are intentionally omitted: at these versions
+  # their analyzer_plugin constraints don't co-resolve (riverpod_lint 3.1.8
+  # wants ^0.14, the current custom_lint wants ^0.13). They're lint-only dev
+  # tooling — `dart analyze` + flutter_lints cover the Definition of Done
+  # (PRD §11). Re-add once a matching custom_lint ships.
 
 flutter:
   uses-material-design: true
   generate: true
-  assets:
-    - assets/web_admin/

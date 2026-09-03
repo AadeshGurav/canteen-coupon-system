@@ -28,7 +28,7 @@ jobs:
       - run: flutter pub get
 
       # Codegen output is git-ignored (see .gitignore) — generate before analyze.
-      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart run build_runner build
 
       - run: dart format --output=none --set-exit-if-changed lib test
 
@@ -55,7 +55,7 @@ jobs:
           cache: true
 
       - run: flutter pub get
-      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart run build_runner build
       - run: flutter build apk --release
 
       - uses: actions/upload-artifact@v4
