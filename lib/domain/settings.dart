@@ -35,6 +35,23 @@ class UnitPrices {
 }
 
 class SettingsSnapshot {
+  factory SettingsSnapshot.fromJson(Map<String, dynamic> j) => SettingsSnapshot(
+        graceAllowanceEnabled: j['graceAllowanceEnabled'] as bool,
+        graceAllowanceUnits: (j['graceAllowanceUnits'] as num).toInt(),
+        reversalWindowMinutes: (j['reversalWindowMinutes'] as num).toInt(),
+        mealWindows: (j['mealWindows'] as Map<String, dynamic>).map(
+          (k, v) => MapEntry(
+              k, MealWindowConfig.fromJson(v as Map<String, dynamic>)),
+        ),
+        localTimezone: j['localTimezone'] as String,
+        upiId: j['upiId'] as String,
+        upiPayeeName: j['upiPayeeName'] as String,
+        unitPrices: UnitPrices.fromJson(j['unitPrices'] as Map<String, dynamic>),
+        appName: j['appName'] as String,
+        prepLeadMinutes: (j['prepLeadMinutes'] as num).toInt(),
+        purchaseLeadDays: (j['purchaseLeadDays'] as num).toInt(),
+      );
+
   const SettingsSnapshot({
     required this.graceAllowanceEnabled,
     required this.graceAllowanceUnits,

@@ -209,6 +209,27 @@ class SettingsPatch {
   final int? prepLeadMinutes;
   final int? purchaseLeadDays;
 
+  /// Wire form for the client → host PATCH. Only set fields are included, so
+  /// the host's partial-update semantics are preserved.
+  Map<String, dynamic> toJson() => {
+        if (graceAllowanceEnabled != null)
+          'graceAllowanceEnabled': graceAllowanceEnabled,
+        if (graceAllowanceUnits != null)
+          'graceAllowanceUnits': graceAllowanceUnits,
+        if (reversalWindowMinutes != null)
+          'reversalWindowMinutes': reversalWindowMinutes,
+        if (mealWindows != null)
+          'mealWindows':
+              mealWindows!.map((k, v) => MapEntry(k, v.toJson())),
+        if (localTimezone != null) 'localTimezone': localTimezone,
+        if (upiId != null) 'upiId': upiId,
+        if (upiPayeeName != null) 'upiPayeeName': upiPayeeName,
+        if (unitPrices != null) 'unitPrices': unitPrices!.toJson(),
+        if (appName != null) 'appName': appName,
+        if (prepLeadMinutes != null) 'prepLeadMinutes': prepLeadMinutes,
+        if (purchaseLeadDays != null) 'purchaseLeadDays': purchaseLeadDays,
+      };
+
   List<String> get changedFields => {
         if (graceAllowanceEnabled != null) 'graceAllowanceEnabled',
         if (graceAllowanceUnits != null) 'graceAllowanceUnits',
