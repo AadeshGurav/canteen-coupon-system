@@ -1,9 +1,9 @@
 # PRD — Canteen Unit-Based Coupon System
 
-**Status:** Active build
+**Status:** Active build — **v2 architecture pivot approved (native Flutter app, see §13–§14), supersedes the original browser/FastAPI/MongoDB delivery model described in earlier sections of this document.** Where a section conflicts with §13–§14, the later section wins; conflicts are marked inline with strikethrough + a "Superseded" note rather than silently deleted, so the reasoning trail stays intact.
 **Owner:** Aadesh (developer/architect) — building for a canteen contractor client
-**Build window:** 15 days, single-campus pilot
-**Audience for this doc:** Claude Code (or any engineer/agent) implementing this system. Read this fully before writing code.
+**Build window:** originally 15 days for the v1 pilot; v2 (native app) timeline TBD
+**Audience for this doc:** Claude Code (or any engineer/agent) implementing this system. Read this fully before writing code — **§13 and §14 specifically contain pinned dependency versions and structural decisions that should not be re-researched or re-decided at build time.**
 
 ---
 
@@ -34,7 +34,7 @@ This is **not** a payment platform and **not** a multi-tenant SaaS product. It i
 - No real money custody, wallets, or payment processing beyond generating a UPI payment QR code. The system tracks meal **units**, never currency balances as a stored-value wallet.
 - No multi-campus / multi-tenant support in this build (design should not actively block it later, but do not build it now).
 - No student/staff-facing menu view. The menu planner is admin-only.
-- No mobile app. Everything is a browser page served on the local network.
+- ~~No mobile app. Everything is a browser page served on the local network.~~ **Superseded — see §13.** The system is being rebuilt as a native Flutter app for Android first. This is a deliberate architecture pivot, not scope creep: the browser-only approach still stands as the reasoning for *why* the system must stay local-network-first and self-hosted (§7) — only the delivery mechanism (native app vs. browser) and backend stack (embedded Dart server vs. FastAPI/MongoDB) are changing. §13 is the authoritative record of that decision and what replaces it.
 - No automated UPI payment webhook/confirmation in this build — confirmation is manual by the admin.
 - No WhatsApp integration in this build (deferred — see §9).
 
@@ -157,9 +157,9 @@ All of the following must be stored in the database and editable at runtime — 
 
 - **Frictionless & foolproof.** This term was used repeatedly in planning specifically about the admin/payment side — every action there should have a clear, unambiguous outcome and be hard to get wrong. Favor explicit confirmations and clear state over cleverness.
 - **Mobile-first, lightweight scanner page.** It will sit open on a phone browser for hours across a meal period. No heavy frontend framework, no memory leaks, no unnecessary background work. Plain JS/HTML preferred over a full SPA framework for this page specifically.
-- **Local-network first.** Scanning and the admin dashboard must work entirely on the local network with no internet dependency. Internet access is only required for the UPI QR payment step (and that's still just a static QR, not a live network call), and for the one-time download of `mkcert` when running `make tls-setup` — not for anything during normal day-to-day operation. **TLS is required, not optional**, for the scanner specifically: browsers only allow camera access in a secure context (HTTPS or `localhost`), and that rule holds even on a fully private, offline LAN — see `make tls-setup` in the README and `docs/USER_GUIDE.md` §2.3.
+- **Local-network first.** Scanning and the admin dashboard must work entirely on the local network with no internet dependency. Internet access is only required for the UPI QR payment step (and that's still just a static QR, not a live network call) — not for anything during normal day-to-day operation. ~~**TLS is required, not optional**, for the scanner specifically: browsers only allow camera access in a secure context (HTTPS or `localhost`), and that rule holds even on a fully private, offline LAN — see `make tls-setup` in the README and `docs/USER_GUIDE.md` §2.3.~~ **Superseded — see §13.6.** Under the native-app architecture, scanning uses the device's native camera API, not a browser, so the secure-context requirement that forced mandatory TLS no longer applies to scanning. TLS/HTTPS is downgraded from a hard requirement to a recommended-but-optional protection for the *desktop-browser admin* surface only (protecting login credentials and session cookies over LAN, not enabling a feature) — see §13.6 for the certificate approach.
 - **Operable without the developer.** The admin is technically capable and can debug his own issues post-handoff, but only if the system surfaces **clear, specific errors** (not generic 500s or silent failures) and maintains a **detailed, searchable action log** of scans, top-ups, and admin actions. Design logging as a first-class feature, not an afterthought — this is intended to double as the admin's own debugging tool.
-- **Self-hosted, low-maintenance.** No managed cloud dependencies required to run day-to-day. Target host is a laptop (or possibly a phone) on the local network. If hosted off a phone hotspot, the host's IP (and on Android 11+, its whole subnet) isn't stable without rooting the phone — `make mdns-setup` (optional, see README) publishes a `<hostname>.local` address as a workaround, since it doesn't depend on the current IP at all.
+- **Self-hosted, low-maintenance.** No managed cloud dependencies required to run day-to-day. ~~Target host is a laptop (or possibly a phone) on the local network. If hosted off a phone hotspot, the host's IP (and on Android 11+, its whole subnet) isn't stable without rooting the phone — `make mdns-setup` (optional, see README) publishes a `<hostname>.local` address as a workaround, since it doesn't depend on the current IP at all.~~ **Superseded — see §13.** Under the native-app architecture, any device running the app can become the host outright — no separate laptop, no manual `.local` setup script. Service discovery (§13.5) replaces the old mDNS workaround with the same underlying idea (don't depend on a stable IP), but built into the app rather than a manual step in the README.
 - **This is a one-time build, not a retainer.** Prioritize correctness and clarity of failure over speculative extensibility. Don't build for scale this project doesn't need yet.
 
 ---
@@ -249,3 +249,130 @@ Originally scoped as a 15-day build:
 - Days 13–15: scan reversal, QR reprinting, logging improvements, pilot testing with real conditions.
 
 This is context for prioritization, not a constraint that should force cut corners on correctness.
+
+---
+
+## 13. Native App Architecture (v2 — Flutter, Host/Client on LAN)
+
+**Status:** Approved direction, supersedes §3's original "no mobile app" non-goal and the browser-only/FastAPI-MongoDB delivery model described elsewhere in this document. Everything in §5, §6, and §8 (business rules, functional requirements, data model shape) still holds — this section only changes *how it's delivered and hosted*, not what it does.
+
+### 13.1 Why this change
+
+The original design put a laptop (or a phone acting only as a hotspot) at the center of the network, running FastAPI + MongoDB, with every device — including the host machine itself — reaching it through a browser. In practice this meant:
+- A dependency on a laptop being present and powered on, when the actual devices in daily use are phones.
+- A browser-only scanner page that could only get camera access over a secure context (HTTPS), which required a manual, one-time `mkcert` + root-CA-install step per device (§7, now superseded).
+
+Moving to a single Flutter app that can act as **either host or client on the same LAN, from the same APK**, removes the laptop dependency entirely and turns the scanner into a first-class native camera flow instead of a browser workaround.
+
+### 13.2 Core model: one APK, two roles
+
+- On first launch, the app asks the operator to choose **Host** or **Client**. This is a per-install/per-session choice, not a compiled variant — the same APK ships to every device.
+- **Host mode:** the phone (or eventually a desktop build, §13.8) runs the full backend in-process — business logic, the embedded database, and an embedded HTTP server (§13.4) — and advertises itself on the LAN (§13.5) so other devices can find it.
+- **Client mode:** the app discovers a host on the LAN and talks to it over HTTP/JSON, exactly like today's browser pages did against FastAPI — the UI code is written against a single data-access interface so host-mode (local calls) and client-mode (network calls) are interchangeable at that boundary (see §13.7's layering).
+- If the host device goes offline mid-session, clients should show a clear, specific "host unreachable" state (per CLAUDE.md §8, no silent failure) rather than a generic network error, with a retry/re-discover action.
+
+### 13.3 Tech stack decisions (researched, pinned, ready to build against)
+
+Per CLAUDE.md §10 ("every dependency is a decision, pin deliberately"), each of these was checked against current maintenance status, not just familiarity — one of the original candidates (Isar, for the database) was rejected specifically because it failed that check. Exact versions below reflect what was current as of this research pass; run `flutter pub outdated` at build time and bump patch/minor versions deliberately if newer stable releases exist, per CLAUDE.md §10's "know why an upgrade is happening."
+
+| Concern | Package(s) | Version (pin) | Why |
+|---|---|---|---|
+| Embedded HTTP server | `shelf`, `shelf_router`, `shelf_static` | `shelf: ^1.4.2`, `shelf_router: ^1.1.4`, `shelf_static: ^1.1.2` | Official `dart-lang`-maintained, minimal, composable middleware model — matches CLAUDE.md's "don't reinvent the stack" and "prefer the standard/blessed tooling" guidance. `shelf_router` gives FastAPI-style route definitions; `shelf_static` serves the desktop-browser admin UI (§13.4) from the same server. |
+| Local database | `drift` + `sqlite3_flutter_libs` | `drift: ^2.21.0` (+ matching `drift_dev`, `build_runner`) | **Isar was evaluated and rejected** — the core `isar` package's last release was 2023 and it is not maintained (a "v4" exists but is explicitly marked not production-ready; a community fork exists but has a low package-health score and one maintainer, which is a stability risk CLAUDE.md §10 flags directly: "prefer the standard library or something already in the project"). Drift is a Flutter Favorite, actively maintained, type-safe (compile-time query checking — matches CLAUDE.md §7's "validate input at the boundary" philosophy extended to the DB layer), and gives schema migrations for free, which this app will need as it grows (§13.9). |
+| QR/barcode scanning | `mobile_scanner` | `^7.2.0` | Native CameraX/ML Kit on Android (AVFoundation on iOS, for later). Actively maintained, high adoption. Replaces the browser+`html5-qrcode` approach entirely — this is the biggest single simplification from the pivot, since it also removes the TLS-for-camera requirement (§7, §13.6). |
+| LAN host discovery/advertisement | `nsd` | `^5.0.1` | Uses each platform's native NSD/Bonjour/mDNS APIs rather than a hand-rolled multicast socket implementation, which is more reliable across real-world Android OEM Wi-Fi stacks. Supports both `register()` (host advertises itself) and `startDiscovery()` (client finds it) — exactly the two operations needed, no extra surface. |
+| QR code generation (member codes, UPI pay QR) | `qr_flutter` | `^4.1.0` | Mature, null-safe, no network dependency to render — matches the "static QR, not a live call" principle already established for UPI (§6.3). |
+| PDF bill generation | `pdf` (+ `printing` for share/print/save) | `pdf: ^3.11.1`, `printing: ^5.13.4` | Dart-native, no platform-specific PDF engine dependency; direct analog of the current backend's PDF generation, just moved client-side. |
+| State management / dependency injection | `flutter_riverpod` (+ `riverpod_generator`) | `flutter_riverpod: ^2.6.1` | Chosen specifically because it enforces the clean separation CLAUDE.md §4 asks for ("keep a clear boundary between user-facing interfaces and internal API/service layers") — providers are the natural seam between UI, the host/client data-access interface (§13.7), and the underlying services, without global mutable state. |
+| Keeping the host server alive in the background | `flutter_foreground_task` | `^9.x` — **verify package integrity before pinning.** A supply-chain/CDN issue was publicly reported against a specific 9.1.0 build (mismatched published hash in some regions). Do not blindly `pub add` this — resolve to a specific version, verify its published SHA-256 against the package's GitHub release, and pin it explicitly in `pubspec.lock`. This is exactly the "every dependency is a decision" case CLAUDE.md §10 is describing. | Android kills background processes aggressively; if the phone is the host, the embedded server must run as a proper Android foreground service (with the required persistent notification) or it will be killed mid-shift, silently dropping every client's connection — this is a correctness requirement, not a nice-to-have, given §7's "foolproof" standard. |
+
+**Deliberately not adding:** a separate ORM beyond drift, a separate routing/DI framework beyond Riverpod, or any cloud/Firebase dependency for discovery or sync — all would violate CLAUDE.md §4's "prefer deployment simplicity" and §10's "every dependency is a decision."
+
+### 13.4 Same server, two audiences
+
+One `shelf` server instance, mounted with a `Cascade` (or router-level split), serving two kinds of route from the same host process and the same underlying service/DB layer — no duplicated business logic between them:
+- **JSON API routes** (`/api/...`) — consumed by the Flutter client app (other phones on the LAN in client mode).
+- **Static web routes** (`/`, `/admin`, assets) — a lightweight HTML/JS admin page for **desktop browsers**, for the "intense admin work" use case (bulk data entry, spreadsheet-adjacent tasks) that's genuinely more comfortable on a bigger screen than a phone. This does **not** include the scan flow — scanning stays native-app-only (§13.6) since it needs the camera and native app is strictly better for it.
+
+This is the direct answer to the "can we host a web server from the same host app" question: yes, and it's a natural fit for `shelf` rather than a bolt-on — it's the same pattern FastAPI + a static-files mount already used, just running embedded in Dart instead of Python.
+
+### 13.5 Discovery mechanics
+
+- Host mode calls `nsd.register()` advertising a service (e.g., `_canteen._tcp`) with the host's chosen port.
+- Client mode calls `nsd.startDiscovery('_canteen._tcp')` and lists found hosts by their advertised name (e.g., the canteen's configured app name, §6.8) rather than requiring the operator to type an IP or hostname — this satisfies usability heuristic §11.1 #6 (recognition over recall) directly.
+- If a host disappears and reappears (Wi-Fi toggle, app restart), clients should re-resolve automatically rather than requiring a manual reconnect, mirroring the resilience the old `.local`/mDNS setup was designed for.
+
+### 13.6 TLS / certificates — decision
+
+Per the discussion that produced this section: the *original* reason TLS was mandatory (§7) was strictly the browser camera secure-context rule, and that rule no longer applies once scanning is native. What remains is a much smaller, optional concern: encrypting admin login/session traffic between a desktop browser and the phone-hosted server on the LAN.
+
+- **Decision:** ship a **"Generate certificate" button** in host mode that creates a self-signed certificate on-device (no `mkcert` binary, no shelling out — generate natively in Dart via a certificate/crypto package such as `basic_utils` or `pointycastle`) and configures the embedded server to serve HTTPS using it.
+- **Known, accepted limitation:** a self-signed cert cannot eliminate the browser's "not trusted" warning on first connection — only a real CA can. The button changes that first-visit experience from "install a root CA, multiple steps" (today's flow) to "click through one browser warning, once per device" — a real improvement, not a full fix. This trade-off should be stated plainly in the admin-facing UI copy when the button is used (per CLAUDE.md §8: user-facing messages are specific, not falsely reassuring).
+- **Scope:** this protects the desktop-admin surface only. It is explicitly **not** a requirement for the app to function — plain HTTP between two native app instances (host↔client) is acceptable for v1 given this is a closed, single-canteen LAN with no internet exposure (§7's existing local-network-first framing), and can be hardened later without a breaking change (§13.9).
+
+### 13.7 Code structure (SOLID, extensible beyond Android-only v1)
+
+Per the explicit ask that this not be a dead end once other platforms or transports are wanted, and per CLAUDE.md §4/§5 (clean separation of concerns, small focused modules): structure the app so the **host/client distinction is an implementation detail behind one interface**, not a fork in the UI code.
+
+```
+lib/
+  core/            # cross-cutting: config, error types, logging
+  data/
+    local/         # drift schema, DAOs — used only when running as host
+    remote/        # HTTP client against a discovered host — used only when running as client
+    repository/    # ONE interface per domain (MemberRepository, ScanRepository, ...)
+                    # with a HostRepository impl (calls local/) and a ClientRepository impl
+                    # (calls remote/) — UI and business-logic code depend on the interface only
+  services/        # business rules ported from the current FastAPI services/ layer
+                    # (meal-window resolution, grace allowance, scan locking, etc.)
+                    # — these run ONLY on the host, called either in-process (host mode)
+                    # or via the JSON API (client mode calling into a remote host running them)
+  server/          # shelf app: routers, JSON (de)serialization, static admin file serving
+  discovery/       # nsd wrapper: advertise() / find()
+  ui/
+    scanner/       # native camera scan screen (mobile_scanner)
+    admin/         # phone-native admin screens
+    shared_widgets/ # theme-aware components (§14)
+```
+
+This mirrors the existing backend's `core/ schemas/ services/ routers/ utils/` split (PRD §10) closely on purpose — a developer or agent already familiar with the current codebase should recognize the shape immediately. Business rules live in exactly one place (`services/`) regardless of whether the call originated from an in-process host call or a client's HTTP request, which is what makes "extend to iOS / extend to desktop-as-host / extend to a fully offline peer-sync model later" additive rather than a rewrite.
+
+### 13.8 Platform scope for this build vs. later
+
+- **Now:** Android only, phone-as-host and phone-as-client, both from the same APK, per the explicit direction to focus there first.
+- **Structurally free, not yet built:** `mobile_scanner`, `nsd`, `drift`, and `shelf` all already support iOS/desktop — the architecture in §13.7 doesn't need to change to add those targets later, only new platform-specific permission/manifest work and QA.
+- **Not assumed:** don't build toward multi-host sync, cloud backup, or multi-campus support now (§9 still applies) — the interface-based structure in §13.7 makes room for that later without forcing any of that complexity into v1.
+
+### 13.9 Migration notes from the current build
+
+- The MongoDB collections listed in §8 map conceptually to drift tables of the same purpose; exact schema translation (embedded documents → relational tables/foreign keys where MongoDB's `member_entities` or `settings` used nested structures) is implementation work for the build phase, not decided here.
+- Existing pilot data (if any exists by the time this ships) will need a one-time export/import path from MongoDB to the on-device SQLite file — worth a short migration script, scoped separately from this rebuild.
+- README.md and `docs/USER_GUIDE.md` are now out of date against this section (they describe `make mdns-setup`, `make tls-setup`, and browser URLs that no longer apply) and must be updated in the same discipline this document requires of itself (§10.1, §11): tracked as a follow-up pass, not done in this edit.
+
+---
+
+## 14. Visual Theme — Neobrutalism (Client Requirement)
+
+**Status:** Client-requested, approved. This section exists so the "how" doesn't get relitigated during implementation — the theme itself is not up for debate; its *execution* follows the rules below so it doesn't fight CLAUDE.md §11–§12.
+
+### 14.1 The decision
+
+The client has requested a neobrutalism visual theme (thick borders, flat saturated color blocks, hard/offset drop shadows, blocky high-contrast type). This is being built as requested — **not softened or talked out of** — but executed in a way that satisfies this codebase's own accessibility and usability standards (CLAUDE.md §11, §12) rather than working against them. The two are not actually in tension once the theme is scoped deliberately (§14.2) instead of applied uniformly.
+
+### 14.2 Intensity is scoped by screen, not global
+
+- **Full intensity** (heavy borders, hard shadows, large flat color blocks): the scan accept/reject result state, and primary call-to-action buttons (submit top-up, confirm scan reversal, generate bill). This is directly supported by the PRD's own requirement (§6.4) that scan results be "big, unambiguous... no reading required beyond a glance," and by Von Restorff (CLAUDE.md §11.2) — the one thing that should visually dominate a screen is the thing the operator must act on fastest.
+- **Restrained variant** (same border/type language, lighter shadow weight, tighter palette): admin data surfaces — member tables, the menu-planning calendar, settings forms, purchase-schedule lists. These are information-dense per Miller/Cowan (§11.2) and the "aesthetic minimalist design" heuristic (§11.1 #8); full-intensity neobrutalism on every table row would compete with the data itself rather than support it.
+
+### 14.3 Non-negotiable constraints (from CLAUDE.md, apply regardless of theme)
+
+- **Never encode meaning in color alone** (§12.2, POUR "Perceivable"). Accept/reject and other status states get a distinct shape/icon/border-weight in addition to color, not color by itself — this is free to add within a neobrutalism aesthetic and costs nothing stylistically.
+- **WCAG AA contrast is the working default** (§12.2) for text and meaningful UI elements, checked against the actual chosen palette, not assumed because the style is "bold."
+- **8-point spacing grid and small type scale still apply** (§11.4) — neobrutalism is a border/color/shadow language, not license to break the underlying grid. Consistent spacing is what keeps it reading as *intentional* rather than chaotic.
+- **60/30/10 color distribution** (§11.4) still governs how much of the screen is neutral vs. surface vs. accent, even though neobrutalism's accent colors will be more saturated than a typical soft-UI palette — the ratio keeps the loud colors from overwhelming the interface as a whole.
+
+### 14.4 Deliverable for implementation
+
+Before UI build begins: a small theme spec (color tokens, border-width tokens, shadow tokens, and the two intensity levels from §14.2) should be defined once as reusable design tokens (matches `ui/shared_widgets/` in §13.7's structure) rather than hand-styled per-screen — this is the same "config lives in config, not scattered in code" principle (CLAUDE.md §7) applied to design instead of business logic.
+
+---
