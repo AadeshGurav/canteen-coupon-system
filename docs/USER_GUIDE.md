@@ -46,13 +46,35 @@ You can change a device's role later from the ↔ icon in the top bar.
 Scanning uses the phone camera directly — grant the camera permission when
 asked. There is **no HTTPS requirement** for scanning anymore.
 
-### 2.3 Desktop-admin over HTTPS (optional)
+### 2.3 Desktop admin (browser)
 
-For heavy data entry you can point a desktop browser at the host. To encrypt
-that login over the LAN, tap **Generate certificate** on the host console.
-Note: a self-signed certificate still shows a browser "not trusted" warning
-the first time each computer connects — only a real CA removes that. It does
-**not** affect phone-to-phone use.
+For heavy data entry, a full admin runs in a desktop browser — served by the
+host phone itself. On the host console, once the server is running, the
+**DESKTOP ADMIN** box shows the exact URL(s), e.g.:
+
+```
+http://192.168.1.42:8710/
+```
+
+Open that on any computer on the same Wi-Fi and sign in with an **admin** (or
+**counter**) account. It covers everything except scanning (that stays on the
+phone): members, top-ups & billing, scan log & reversal, menu calendar,
+categories, ingredients, recipes, purchase schedule, expenses, refunds,
+settings, users. Bill PDFs open in a new tab.
+
+If the box says "No LAN address found", the host phone isn't on Wi-Fi.
+
+**Optional HTTPS:** tap **Generate certificate** on the host console to
+encrypt that login over the LAN. A self-signed certificate still shows a
+browser "not trusted" warning the first time each computer connects — only a
+real CA removes that. It does **not** affect phone-to-phone use.
+
+### 2.4 Keeping the host awake
+
+When you start the server, the host phone shows a persistent notification and
+runs a foreground service so Android doesn't kill it mid-shift. Allow the
+notification permission when asked. Keep the phone on power and on Wi-Fi;
+don't "force stop" the app.
 
 ---
 

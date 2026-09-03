@@ -1,0 +1,119 @@
+/* Neobrutalism desktop-admin — mirrors lib/ui/theme/tokens.dart (PRD §14).
+   Restrained intensity throughout: this is a dense data surface, not an
+   action moment. Thick flat borders, hard offset shadows, no rounding,
+   blocky mono type, 8-point spacing. */
+
+:root {
+  --bg: #f5f1e8;
+  --surface: #ffffff;
+  --surface-muted: #e9e4d6;
+  --ink: #1a1a1a;
+  --accent: #2b6cf6;
+  --on-accent: #ffffff;
+  --accept: #1e8e4e;
+  --reject: #d62d2d;
+  --warn: #e8a317;
+  --on-warn: #1a1a1a;
+  --border: 3px;
+  --border-bold: 5px;
+  --shadow: 3px 3px 0 var(--ink);
+  --shadow-bold: 6px 6px 0 var(--ink);
+  --s-xs: 4px; --s-sm: 8px; --s-md: 16px; --s-lg: 24px; --s-xl: 32px;
+  font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+body { font-size: 15px; line-height: 1.4; }
+
+h1 { font-size: 26px; font-weight: 700; margin: 0 0 var(--s-md); }
+h2 { font-size: 19px; font-weight: 700; margin: 0 0 var(--s-sm); }
+h3 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin: var(--s-lg) 0 var(--s-sm); }
+a { color: var(--accent); }
+.boot { padding: 40px; font-weight: 700; }
+
+/* Layout ------------------------------------------------------------------ */
+.shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+nav.side {
+  background: var(--surface);
+  border-right: var(--border-bold) solid var(--ink);
+  padding: var(--s-md);
+  display: flex; flex-direction: column; gap: var(--s-xs);
+}
+nav.side .brand { font-weight: 700; font-size: 18px; margin-bottom: var(--s-md); }
+nav.side a {
+  display: block; padding: var(--s-sm) var(--s-md);
+  border: var(--border) solid var(--ink); background: var(--surface);
+  color: var(--ink); text-decoration: none; font-weight: 700; font-size: 13px;
+}
+nav.side a.active { background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow); }
+nav.side .spacer { flex: 1; }
+main { padding: var(--s-lg); overflow: auto; }
+
+/* Cards / tables -------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: var(--border) solid var(--ink);
+  box-shadow: var(--shadow);
+  padding: var(--s-md);
+  margin-bottom: var(--s-md);
+}
+.row { display: flex; gap: var(--s-sm); flex-wrap: wrap; align-items: center; }
+.row.between { justify-content: space-between; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-md); }
+.muted { color: #555; font-size: 13px; }
+
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+th, td { border: var(--border) solid var(--ink); padding: var(--s-sm); text-align: left; font-size: 13px; }
+th { background: var(--surface-muted); text-transform: uppercase; letter-spacing: .03em; }
+tbody tr:hover { background: #faf8f2; }
+
+/* Controls ------------------------------------------------------------ */
+label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; margin: var(--s-sm) 0 var(--s-xs); }
+input, select, textarea {
+  width: 100%; padding: var(--s-sm) var(--s-md);
+  border: var(--border) solid var(--ink); background: var(--surface);
+  font: inherit; color: var(--ink);
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); border-width: var(--border-bold); }
+
+button {
+  padding: var(--s-sm) var(--s-lg); min-height: 40px;
+  border: var(--border) solid var(--ink); background: var(--surface);
+  font: inherit; font-weight: 700; color: var(--ink); cursor: pointer;
+  box-shadow: var(--shadow);
+}
+button:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+button:active { transform: translate(2px, 2px); box-shadow: none; }
+button.primary { background: var(--accent); color: var(--on-accent); border-width: var(--border-bold); box-shadow: var(--shadow-bold); }
+button.danger { background: var(--reject); color: #fff; }
+button.ghost { box-shadow: none; }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.pill { display: inline-block; padding: 2px var(--s-sm); border: 2px solid var(--ink); font-size: 11px; font-weight: 700; }
+.pill.warn { background: var(--warn); color: var(--on-warn); }
+.pill.bad { background: var(--reject); color: #fff; }
+.pill.ok { background: var(--accept); color: #fff; }
+
+/* Login ------------------------------------------------------------- */
+.login-wrap { min-height: 100vh; display: grid; place-items: center; }
+.login-card { width: 380px; }
+
+/* Toast ----------------------------------------------------------- */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--accept); color: #fff; padding: var(--s-md) var(--s-lg);
+  border: var(--border) solid var(--ink); box-shadow: var(--shadow-bold);
+  font-weight: 700; z-index: 50; max-width: 80vw;
+}
+.toast.bad { background: var(--reject); }
+
+/* Modal --------------------------------------------------------- */
+.modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 40; }
+.modal { background: var(--surface); border: var(--border-bold) solid var(--ink); box-shadow: var(--shadow-bold); padding: var(--s-lg); width: 460px; max-width: 92vw; max-height: 88vh; overflow: auto; }
+.modal h2 { margin-bottom: var(--s-md); }
+.modal .actions { display: flex; gap: var(--s-sm); justify-content: flex-end; margin-top: var(--s-lg); }
+
+.summary { display: flex; gap: var(--s-lg); }
+.summary .stat { flex: 1; text-align: center; border: var(--border) solid var(--ink); padding: var(--s-md); background: var(--surface-muted); }
+.summary .stat b { display: block; font-size: 22px; }

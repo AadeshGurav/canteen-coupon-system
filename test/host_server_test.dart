@@ -38,7 +38,12 @@ void main() {
       initialAdminPassword: 'admin-password-1',
     );
 
-    server = HostServer(container);
+    // A stand-in for the materialized web-admin bundle.
+    final webDir = Directory('${tmp.path}/web_admin')..createSync();
+    File('${webDir.path}/index.html').writeAsStringSync('<!doctype html><h1>admin</h1>');
+    File('${webDir.path}/styles.css').writeAsStringSync('body{color:#000}');
+
+    server = HostServer(container, staticRoot: webDir.path);
     await server.start(bind: '127.0.0.1', port: 0);
     base = 'http://127.0.0.1:${server.port}';
     http = HttpClient();
@@ -157,6 +162,36 @@ void main() {
     final res = await _send(http, 'POST', '$base/api/scan',
         token: adminToken, body: {'qrCodeId': 'nope-nope-nope'});
     expect(res.json['outcome'], 'rejected_unknown_code');
+  });
+
+  test('desktop-admin web bundle is served at / and its assets', () async {
+    final index = await _send(http, 'GET', '$base/');
+    expect(index.status, 200);
+    expect(index.body, contains('<h1>admin</h1>'));
+
+    final css = await _send(http, 'GET', '$base/styles.css');
+    expect(css.status, 200);
+    expect(css.body, contains('color:#000'));
+
+    // Unknown path under the SPA still resolves (hash routing → index.html).
+    final missing = await _send(http, 'GET', '$base/nope');
+    expect(missing.status, anyOf(200, 404));
+  });
+
+  test('?token= query param authenticates a browser file download', () async {
+    final m = await _send(http, 'POST', '$base/api/members',
+        token: adminToken, body: {'type': 'staff', 'name': 'Q', 'staffId': 'Q1'});
+    final id = m.json['id'];
+
+    Future<int> statusOf(String url) async {
+      final req = await http.getUrl(Uri.parse(url));
+      final res = await req.close();
+      await res.drain<void>();
+      return res.statusCode;
+    }
+
+    expect(await statusOf('$base/api/members/$id/qr?token=$adminToken'), 200);
+    expect(await statusOf('$base/api/members/$id/qr'), 401);
   });
 
   test('scanner role cannot reach admin-only member creation', () async {

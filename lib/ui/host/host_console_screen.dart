@@ -28,16 +28,23 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
     setState(() => _busy = true);
     await runGuarded(context, () async {
       final container = await ref.read(hostContainerProvider.future);
+      final appName = await container.settings.readAppName();
       final tls = SelfSignedTls(documentsDir);
-      final server = ref.read(hostServerProvider);
+      final server = ref.read(hostServerProvider)
+        ..staticRoot = await ref.read(webAdminDirProvider.future);
       await server.start(
         port: AppConfig.defaultServerPort,
         securityContext: tls.securityContext(),
       );
-      await ref.read(hostAdvertiserProvider).advertise(
-          name: await container.settings.readAppName(),
-          port: AppConfig.defaultServerPort);
+      await ref
+          .read(hostAdvertiserProvider)
+          .advertise(name: appName, port: AppConfig.defaultServerPort);
+      // Keep the process (and this server) alive when backgrounded (PRD §13.3).
+      await ref
+          .read(hostKeepAliveProvider)
+          .start(appName: appName, port: AppConfig.defaultServerPort);
       ref.read(hostRunningProvider.notifier).state = true;
+      ref.invalidate(lanUrlsProvider);
     }, successMessage: 'Server started.');
     if (mounted) setState(() => _busy = false);
   }
@@ -45,6 +52,7 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
   Future<void> _stopServer() async {
     setState(() => _busy = true);
     await runGuarded(context, () async {
+      await ref.read(hostKeepAliveProvider).stop();
       await ref.read(hostAdvertiserProvider).stop();
       await ref.read(hostServerProvider).stop();
       ref.read(hostRunningProvider.notifier).state = false;
@@ -130,11 +138,34 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
                   ),
                   if (running && server != null) ...[
                     const SizedBox(height: NbSpace.sm),
-                    Text('${server.address}:${server.port}',
+                    Text('Listening on port ${server.port}',
                         style: NbType.body),
                     const Text(
                         'Advertised as "${AppConfig.discoveryServiceType}"',
                         style: NbType.body),
+                    const SizedBox(height: NbSpace.sm),
+                    const Text(
+                        'DESKTOP ADMIN — open one of these in a browser '
+                        'on a computer on the same Wi-Fi:',
+                        style: NbType.label),
+                    ref.watch(lanUrlsProvider).maybeWhen(
+                          data: (urls) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: urls.isEmpty
+                                ? [
+                                    const Text(
+                                        'No LAN address found — check Wi-Fi.',
+                                        style: NbType.body)
+                                  ]
+                                : [
+                                    for (final u in urls)
+                                      SelectableText(u,
+                                          style: NbType.body.copyWith(
+                                              fontWeight: FontWeight.w700)),
+                                  ],
+                          ),
+                          orElse: () => const SizedBox.shrink(),
+                        ),
                   ],
                   const SizedBox(height: NbSpace.md),
                   if (docsDir == null)

@@ -14,7 +14,9 @@ import '../data/remote/api_client.dart';
 import '../discovery/discovery.dart';
 import '../domain/ops.dart';
 import '../server/host_container.dart';
+import '../server/host_keep_alive.dart';
 import '../server/server.dart';
+import '../server/web_admin_assets.dart';
 import 'bootstrap.dart';
 export 'bootstrap.dart' show appModeStoreProvider, sharedPreferencesProvider;
 
@@ -69,15 +71,35 @@ const int _sessionTtlHours = 12;
 
 final hostServerProvider = Provider<HostServer>((ref) {
   final container = ref.watch(hostContainerProvider).requireValue;
-  final server = HostServer(container, staticRoot: null);
+  final server = HostServer(container);
   ref.onDispose(server.stop);
   return server;
+});
+
+/// Copies the bundled desktop-admin web files to a real directory `shelf_static`
+/// can serve, once. Returns its path.
+final webAdminDirProvider = FutureProvider<String>((ref) async {
+  final documentsDir = await ref.watch(_documentsDirProvider.future);
+  return WebAdminAssets(documentsDir).materialize();
+});
+
+final hostKeepAliveProvider = Provider<HostKeepAlive>((ref) {
+  final keepAlive = HostKeepAlive();
+  ref.onDispose(keepAlive.stop);
+  return keepAlive;
 });
 
 final hostAdvertiserProvider = Provider<HostAdvertiser>((ref) {
   final advertiser = HostAdvertiser();
   ref.onDispose(advertiser.stop);
   return advertiser;
+});
+
+/// LAN URLs a desktop browser can open once the server is running.
+final lanUrlsProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+  if (!ref.watch(hostRunningProvider)) return const [];
+  final addrs = await HostServer.lanAddresses();
+  return addrs.map((a) => 'http://$a:${AppConfig.defaultServerPort}/').toList();
 });
 
 /// True once the operator has started the server from the host console.

@@ -93,7 +93,10 @@ Middleware requireSessionMiddleware(AuthService auth) {
   return (Handler inner) {
     return (Request request) async {
       final header = request.headers[AppConfig.authHeader.toLowerCase()];
-      final Session session = await auth.requireSession(_bearer(header));
+      // `?token=` is a fallback for browser file downloads (bill PDF / QR
+      // image opened in a new tab), where a request header can't be set.
+      final token = _bearer(header) ?? request.url.queryParameters['token'];
+      final Session session = await auth.requireSession(token);
       unawaited(auth.sweepExpired());
       return inner(request.change(context: {
         'caller': Caller(

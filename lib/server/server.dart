@@ -25,8 +25,9 @@ class HostServer {
   final HostContainer _container;
 
   /// Directory holding the desktop-admin web bundle. When null, only `/api` is
-  /// served (fine for a pure phone-host/phone-client setup).
-  final String? staticRoot;
+  /// served. Set before [start] (the host console materializes the bundle from
+  /// Flutter assets first).
+  String? staticRoot;
 
   final _log = log('server');
   HttpServer? _http;
@@ -34,6 +35,19 @@ class HostServer {
   bool get isRunning => _http != null;
   int? get port => _http?.port;
   String? get address => _http?.address.address;
+
+  /// Non-loopback IPv4 addresses this device is reachable at — for showing the
+  /// operator the exact URL to open a desktop browser to.
+  static Future<List<String>> lanAddresses() async {
+    final out = <String>[];
+    for (final ni in await NetworkInterface.list(
+        type: InternetAddressType.IPv4, includeLoopback: false)) {
+      for (final addr in ni.addresses) {
+        if (!addr.isLoopback) out.add(addr.address);
+      }
+    }
+    return out;
+  }
 
   /// Starts listening on [bind]:[port]. If [securityContext] is given the
   /// server speaks HTTPS with that certificate (PRD §13.6's self-signed cert).
