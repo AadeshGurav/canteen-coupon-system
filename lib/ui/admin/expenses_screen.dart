@@ -55,6 +55,14 @@ class ExpensesScreen extends ConsumerWidget {
             child: AsyncView<List<Expense>>(
               value: expenses,
               onRetry: () => ref.invalidate(_expensesProvider),
+              loadingLabel: 'Loading expenses…',
+              empty: NbEmpty(
+                icon: Icons.receipt_long_outlined,
+                title: 'No expenses logged',
+                quips: EmptyQuips.expenses,
+                actionLabel: 'Log an expense',
+                onAction: () => _form(context, ref),
+              ),
               builder: (list) => ListView.separated(
                 padding: const EdgeInsets.all(NbSpace.md),
                 itemCount: list.length,

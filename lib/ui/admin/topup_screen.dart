@@ -126,9 +126,18 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen> {
       body: AsyncView<SettingsSnapshot>(
         value: settings,
         onRetry: () => ref.invalidate(_settingsProvider),
+        loadingLabel: 'Loading prices…',
         builder: (s) => AsyncView<List<Member>>(
           value: members,
           onRetry: () => ref.invalidate(_membersProvider),
+          loadingLabel: 'Loading members…',
+          empty: const NbEmpty(
+            icon: Icons.person_off_outlined,
+            title: 'No active members',
+            quips: [
+              'Add someone on the Members page first, then come back to top up.',
+            ],
+          ),
           builder: (list) => ListView(
             padding: const EdgeInsets.all(NbSpace.lg),
             children: [

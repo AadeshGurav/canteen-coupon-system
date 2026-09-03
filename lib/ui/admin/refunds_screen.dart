@@ -38,6 +38,14 @@ class RefundsScreen extends ConsumerWidget {
       body: AsyncView<List<Refund>>(
         value: refunds,
         onRetry: () => ref.invalidate(_refundsProvider),
+        loadingLabel: 'Loading refunds…',
+        empty: NbEmpty(
+          icon: Icons.undo,
+          title: 'No refunds yet',
+          quips: EmptyQuips.refunds,
+          actionLabel: 'Process a refund',
+          onAction: () => _form(context, ref),
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

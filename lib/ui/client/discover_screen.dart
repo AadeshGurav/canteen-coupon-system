@@ -26,8 +26,7 @@ class DiscoverScreen extends ConsumerWidget {
             icon: const Icon(Icons.swap_horiz),
             tooltip: 'Change mode',
             onPressed: () async {
-              await ref.read(appModeStoreProvider).clear();
-              ref.invalidate(appModeStoreProvider);
+              await ref.read(currentModeProvider.notifier).clear();
             },
           ),
         ],

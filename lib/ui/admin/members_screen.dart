@@ -34,6 +34,14 @@ class MembersScreen extends ConsumerWidget {
       body: AsyncView<List<Member>>(
         value: members,
         onRetry: () => ref.invalidate(_membersProvider),
+        loadingLabel: 'Loading members…',
+        empty: NbEmpty(
+          icon: Icons.people_outline,
+          title: 'No members yet',
+          quips: EmptyQuips.members,
+          actionLabel: 'Add the first member',
+          onAction: () => _openForm(context, ref, null),
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

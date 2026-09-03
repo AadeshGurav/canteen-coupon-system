@@ -33,6 +33,14 @@ class RecipesScreen extends ConsumerWidget {
       body: AsyncView<List<Recipe>>(
         value: recipes,
         onRetry: () => ref.invalidate(_recipesProvider),
+        loadingLabel: 'Loading recipes…',
+        empty: NbEmpty(
+          icon: Icons.menu_book_outlined,
+          title: 'No recipes yet',
+          quips: EmptyQuips.recipes,
+          actionLabel: 'Add a recipe',
+          onAction: () => _form(context, ref, null),
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

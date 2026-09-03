@@ -61,17 +61,55 @@ const api = {
 
 // --- feedback -----------------------------------------------------------
 let toastTimer;
-function toast(msg, ok = true) {
+function toast(msg, ok = true, ms) {
   const t = $('#toast');
   t.textContent = msg;
   t.className = 'toast' + (ok ? '' : ' bad');
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), 3500);
+  if (ms !== 0) toastTimer = setTimeout(() => (t.hidden = true), ms || (ok ? 3000 : 6000));
 }
+
+// Runs fn with visible feedback the whole way: an immediate "Working…" line,
+// then a success line, or on failure the error's message + code — never a
+// silent no-op.
 async function guard(fn, okMsg) {
-  try { const r = await fn(); if (okMsg) toast(okMsg); return r ?? true; }
-  catch (e) { toast(e.message || String(e), false); return false; }
+  toast('Working…', true, 0);
+  try {
+    const r = await fn();
+    toast(okMsg || 'Done.');
+    return r ?? true;
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    const code = e && e.code ? `  [${e.code}]` : '';
+    toast(msg + code, false);
+    return false;
+  }
+}
+
+// Empty-state block — a line of personality instead of a blank table.
+const QUIPS = {
+  members: ['Not a soul on the list yet. Add your first hungry human.', 'Zero members. Big "new school" energy.'],
+  topups: ['No top-ups yet. The ledger is squeaky clean.'],
+  scans: ['No scans yet. The scanner is well-rested.'],
+  menu: ['Nothing planned this month. Chef’s surprise, then?'],
+  categories: ['No categories. "Jain", "Normal", "Staff" — your call.'],
+  ingredients: ['Pantry’s empty on paper. Add what you actually buy.'],
+  recipes: ['No recipes. The dishes are keeping their secrets.'],
+  purchase: ['Shopping list is empty. Either you’re stocked, or menus need planning.'],
+  expenses: ['No expenses logged. Profit looks amazing from here.'],
+  refunds: ['No refunds. Everyone’s eating what they paid for.'],
+  users: ['Just you so far. Add a counter or scanner account when you need one.'],
+};
+function emptyState(key, title, actionLabel, onAction) {
+  const quips = QUIPS[key] || ['Nothing here yet.'];
+  return h('div', { class: 'card', style: 'text-align:center;padding:40px' },
+    h('div', { style: 'font-size:32px' }, '―'),
+    h('h2', {}, title),
+    h('div', { class: 'muted' }, quips[Math.floor(Math.random() * quips.length)]),
+    (actionLabel && onAction)
+      ? h('div', { style: 'margin-top:16px' }, h('button', { class: 'primary', onclick: onAction }, actionLabel))
+      : null);
 }
 
 function modal(title, bodyNode, { okLabel = 'Save', onOk } = {}) {
@@ -139,7 +177,7 @@ views.login = async () => {
 };
 
 // generic resource table with add/edit/delete via a field spec
-function crudView({ title, path, columns, fields, toBody, canDelete = true, extra }) {
+function crudView({ title, path, columns, fields, toBody, canDelete = true, extra, emptyKey }) {
   return async () => {
     const rows = await api.get(path);
     const openForm = (row) => {
@@ -174,8 +212,10 @@ function crudView({ title, path, columns, fields, toBody, canDelete = true, extr
       h('div', { class: 'row between' }, h('h1', { text: title }),
         h('button', { class: 'primary', onclick: () => openForm(null) }, '+ New')),
       extra ? extra(render) : null,
-      h('table', {},
-        h('thead', {}, h('tr', {}, ...columns.map((c) => h('th', { text: c.label }), ), h('th', { text: '' }))),
+      rows.length === 0
+        ? emptyState(emptyKey || 'members', `No ${title.toLowerCase()} yet`, `+ New ${title}`, () => openForm(null))
+        : h('table', {},
+        h('thead', {}, h('tr', {}, ...columns.map((c) => h('th', { text: c.label })), h('th', { text: '' }))),
         h('tbody', {}, ...rows.map((r) => h('tr', {},
           ...columns.map((c) => h('td', {}, c.render ? c.render(r) : String(r[c.key] ?? ''))),
           h('td', {},
@@ -190,6 +230,10 @@ function crudView({ title, path, columns, fields, toBody, canDelete = true, extr
 views.members = async () => {
   const members = await api.get('/members');
   const settings = await store.ensureSettings();
+  if (!members.length) return h('div', {},
+    h('h1', {}, 'Members'),
+    emptyState('members', 'No members yet', '+ New member', () => openForm(null)));
+
 
   const openForm = (m) => {
     const type = h('select', {}, h('option', { value: 'student' }, 'Student'), h('option', { value: 'staff' }, 'Staff'));
@@ -280,6 +324,9 @@ views.topups = async () => {
     api.get('/members?status=active'), store.ensureSettings(), api.get('/topups'),
   ]);
   const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
+  if (!members.length) return h('div', {}, h('h1', {}, 'Top-ups & billing'),
+    emptyState('members', 'No members to top up', '', null));
+
 
   const open = () => {
     const sel = h('select', {}, ...members.map((m) => h('option', { value: m.id }, `${m.name} (${m.type})`)));
@@ -352,6 +399,10 @@ views.topups = async () => {
 // scan log -------------------------------------------------------------
 views.scans = async () => {
   const scans = await api.get('/scans?limit=300');
+  if (!scans.length) return h('div', {},
+    h('h1', {}, 'Scan log'),
+    emptyState('scans', 'No scan log yet', null, null));
+
   return h('div', {},
     h('h1', {}, 'Scan log'),
     h('table', {},
@@ -400,6 +451,9 @@ views.menu = async () => {
   };
   const byDay = {};
   for (const e of entries) (byDay[e.date] ??= []).push(e);
+  if (!entries.length) return h('div', {},
+    h('div', { class: 'row between' }, h('h1', {}, start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })), h('button', { class: 'primary', onclick: open }, '+ Add entry')),
+    emptyState('menu', 'Nothing planned this month', '+ Add entry', open));
   return h('div', {},
     h('div', { class: 'row between' }, h('h1', {}, start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })),
       h('button', { class: 'primary', onclick: open }, '+ Add entry')),
@@ -414,14 +468,14 @@ views.menu = async () => {
 };
 
 views.categories = crudView({
-  title: 'Menu category', path: '/menu-categories',
+  title: 'Menu category', path: '/menu-categories', emptyKey: 'categories',
   columns: [{ label: 'Name', key: 'name' }, { label: 'Description', key: 'description' }],
   fields: [{ key: 'name', label: 'Name' }, { key: 'description', label: 'Description' }],
   toBody: (i) => ({ name: i.name.value.trim(), description: i.description.value.trim() || null }),
 });
 
 views.ingredients = crudView({
-  title: 'Ingredient', path: '/ingredients',
+  title: 'Ingredient', path: '/ingredients', emptyKey: 'ingredients',
   columns: [{ label: 'Name', key: 'name' }, { label: 'Unit', key: 'unit' }],
   fields: [{ key: 'name', label: 'Name' }, { key: 'unit', label: 'Unit (kg, litre, pcs…)' }],
   toBody: (i) => ({ name: i.name.value.trim(), unit: i.unit.value.trim() }),
@@ -431,6 +485,10 @@ views.ingredients = crudView({
 views.recipes = async () => {
   const [recipes, ingredients] = await Promise.all([api.get('/recipes'), store.ensureIngredients()]);
   const nameById = Object.fromEntries(ingredients.map((i) => [i.id, i.name]));
+  if (!recipes.length) return h('div', {},
+    h('h1', {}, 'Recipes'),
+    emptyState('recipes', 'No recipes yet', '+ New recipe', () => open(null)));
+
   const open = (r) => {
     const dish = h('input', {}); dish.value = r?.dishName ?? '';
     const lines = h('div', {});
@@ -498,6 +556,8 @@ views.purchase = async () => {
   };
   const byDay = {};
   for (const it of items) (byDay[it.date] ??= []).push(it);
+  if (!items.length) return h('div', {}, h('h1', {}, 'Purchase schedule'),
+    emptyState('purchase', 'Nothing to buy', 'Generate from menu', generate));
   return h('div', {},
     h('div', { class: 'row between' }, h('h1', {}, 'Purchase schedule'),
       h('div', { class: 'row' }, h('button', { onclick: generate }, 'Generate'), h('button', { class: 'primary', onclick: addManual }, '+ Item'))),
@@ -541,6 +601,7 @@ views.expenses = async () => {
       h('div', { class: 'stat' }, h('b', { text: 'Rs. ' + summary.revenue.toFixed(0) }), 'Revenue'),
       h('div', { class: 'stat' }, h('b', { text: 'Rs. ' + summary.expenses.toFixed(0) }), 'Expenses'),
       h('div', { class: 'stat' }, h('b', { text: 'Rs. ' + summary.profit.toFixed(0) }), 'Profit')),
+    list.length === 0 ? emptyState('expenses', 'No expenses logged', '+ Log expense', open) :
     h('table', { style: 'margin-top:16px' }, h('thead', {}, h('tr', {}, ...['Date', 'Category', 'Description', 'Amount'].map((t) => h('th', { text: t })))),
       h('tbody', {}, ...list.map((e) => h('tr', {},
         h('td', { text: new Date(e.date).toLocaleDateString() }),
@@ -573,6 +634,7 @@ views.refunds = async () => {
   };
   return h('div', {},
     h('div', { class: 'row between' }, h('h1', {}, 'Refunds'), h('button', { class: 'primary', onclick: open }, '+ New refund')),
+    list.length === 0 ? emptyState('refunds', 'No refunds yet', '+ New refund', open) :
     h('table', {}, h('thead', {}, h('tr', {}, ...['Member', 'L/B/Br', 'Amount', 'By', 'Reason', 'When'].map((t) => h('th', { text: t })))),
       h('tbody', {}, ...list.map((r) => h('tr', {},
         h('td', { text: nameById[r.memberId] ?? r.memberId }),
@@ -585,6 +647,10 @@ views.refunds = async () => {
 // users -------------------------------------------------------
 views.users = async () => {
   const users = await api.get('/users');
+  if (!users.length) return h('div', {},
+    h('h1', {}, 'Users'),
+    emptyState('users', 'No users yet', '+ New user', () => open(null)));
+
   const open = (u) => {
     const name = h('input', {}); name.value = u?.username ?? ''; if (u) name.disabled = true;
     const pw = h('input', { type: 'password', placeholder: u ? 'blank = keep' : '' });

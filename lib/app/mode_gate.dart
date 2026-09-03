@@ -78,8 +78,7 @@ class _ModePicker extends ConsumerWidget {
   const _ModePicker();
 
   Future<void> _choose(WidgetRef ref, AppMode mode) async {
-    await ref.read(appModeStoreProvider).write(mode);
-    ref.invalidate(appModeStoreProvider);
+    await ref.read(currentModeProvider.notifier).set(mode);
   }
 
   @override

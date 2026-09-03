@@ -31,6 +31,14 @@ class IngredientsScreen extends ConsumerWidget {
       body: AsyncView<List<Ingredient>>(
         value: ingredients,
         onRetry: () => ref.invalidate(ingredientsProvider),
+        loadingLabel: 'Loading ingredients…',
+        empty: NbEmpty(
+          icon: Icons.egg_alt_outlined,
+          title: 'No ingredients yet',
+          quips: EmptyQuips.ingredients,
+          actionLabel: 'Add an ingredient',
+          onAction: () => _form(context, ref, null),
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

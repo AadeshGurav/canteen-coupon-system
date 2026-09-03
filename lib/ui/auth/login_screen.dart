@@ -40,11 +40,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(sessionProvider.notifier)
           .login(_username.text.trim(), _password.text);
-      // ModeGate rebuilds on the session change and routes to the role home.
+      // This screen is always PUSHED (from the host console / discovery
+      // screen), so ModeGate swapping its home underneath isn't enough —
+      // pop back to it, or the operator keeps staring at the login form.
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } on AppException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = '$e');
+      setState(() => _error = 'Could not sign in: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

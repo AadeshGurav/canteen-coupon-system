@@ -27,6 +27,12 @@ class ScanLogScreen extends ConsumerWidget {
       body: AsyncView<List<ScanRecord>>(
         value: scans,
         onRetry: () => ref.invalidate(_scansProvider),
+        loadingLabel: 'Loading the scan log…',
+        empty: const NbEmpty(
+          icon: Icons.qr_code_scanner,
+          title: 'No scans yet',
+          quips: EmptyQuips.scans,
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

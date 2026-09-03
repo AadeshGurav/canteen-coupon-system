@@ -31,6 +31,14 @@ class MenuCategoriesScreen extends ConsumerWidget {
       body: AsyncView<List<MenuCategory>>(
         value: categories,
         onRetry: () => ref.invalidate(_categoriesProvider),
+        loadingLabel: 'Loading categories…',
+        empty: NbEmpty(
+          icon: Icons.category_outlined,
+          title: 'No categories yet',
+          quips: EmptyQuips.categories,
+          actionLabel: 'Add a category',
+          onAction: () => _form(context, ref, null),
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

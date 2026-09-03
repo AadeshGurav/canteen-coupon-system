@@ -32,6 +32,14 @@ class UsersScreen extends ConsumerWidget {
       body: AsyncView<List<AppUser>>(
         value: users,
         onRetry: () => ref.invalidate(_usersProvider),
+        loadingLabel: 'Loading users…',
+        empty: NbEmpty(
+          icon: Icons.admin_panel_settings,
+          title: 'Only you so far',
+          quips: EmptyQuips.users,
+          actionLabel: 'Add a user',
+          onAction: () => _form(context, ref, null),
+        ),
         builder: (list) => ListView.separated(
           padding: const EdgeInsets.all(NbSpace.md),
           itemCount: list.length,

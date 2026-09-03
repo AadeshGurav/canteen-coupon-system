@@ -20,11 +20,31 @@ import '../server/web_admin_assets.dart';
 import 'bootstrap.dart';
 export 'bootstrap.dart' show appModeStoreProvider, sharedPreferencesProvider;
 
-/// The chosen mode for this launch. `null` means "not chosen yet" → the mode
-/// picker. Writing it (or clearing it) invalidates this provider.
-final currentModeProvider = Provider<AppMode?>((ref) {
-  return ref.watch(appModeStoreProvider).read();
-});
+/// The chosen mode for this install. `null` → the mode picker.
+///
+/// Held in a [Notifier] (not a plain Provider over the store) so [set]/[clear]
+/// update the UI immediately — the store is `overrideWithValue`, so invalidating
+/// it notifies nobody, which is why "Run as host" used to need an app restart.
+class ModeController extends Notifier<AppMode?> {
+  @override
+  AppMode? build() => ref.read(appModeStoreProvider).read();
+
+  Future<void> set(AppMode mode) async {
+    await ref.read(appModeStoreProvider).write(mode);
+    state = mode;
+  }
+
+  Future<void> clear() async {
+    await ref.read(appModeStoreProvider).clear();
+    // Drop any host/client resources and session tied to the old mode.
+    ref.invalidate(sessionProvider);
+    ref.invalidate(selectedHostProvider);
+    state = null;
+  }
+}
+
+final currentModeProvider =
+    NotifierProvider<ModeController, AppMode?>(ModeController.new);
 
 // ===========================================================================
 // Host mode

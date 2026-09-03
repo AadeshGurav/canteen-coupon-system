@@ -49,11 +49,15 @@ class PurchaseScheduleScreen extends ConsumerWidget {
       body: AsyncView<List<PurchaseScheduleItem>>(
         value: schedule,
         onRetry: () => ref.invalidate(_scheduleProvider),
+        loadingLabel: 'Loading the shopping list…',
+        empty: NbEmpty(
+          icon: Icons.shopping_cart_outlined,
+          title: 'Nothing to buy',
+          quips: EmptyQuips.purchase,
+          actionLabel: 'Generate from menu',
+          onAction: () => _generate(context, ref),
+        ),
         builder: (list) {
-          if (list.isEmpty) {
-            return const Center(
-                child: Text('Nothing scheduled.', style: NbType.body));
-          }
           final byDay = <String, List<PurchaseScheduleItem>>{};
           for (final it in list) {
             byDay.putIfAbsent(fmt.format(it.date), () => []).add(it);
