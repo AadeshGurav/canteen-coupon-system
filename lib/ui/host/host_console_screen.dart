@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -45,9 +46,11 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
 
   Future<void> _startServer(String documentsDir) async {
     setState(() => _busy = true);
-    await runGuarded(context, () async {
-      final container = await ref.read(hostContainerProvider.future);
-      final appName = await container.settings.readAppName();
+    // The server binding is the thing that must succeed; publishing on mDNS and
+    // the keep-alive service are best-effort (mDNS needs Wi-Fi and can hang on
+    // mobile data) — a failure there must not leave the console showing
+    // "stopped" while the server is actually listening.
+    final started = await runGuarded(context, () async {
       final tls = SelfSignedTls(documentsDir);
       final server = ref.read(hostServerProvider)
         ..staticRoot = await ref.read(webAdminDirProvider.future);
@@ -55,24 +58,51 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
         port: AppConfig.defaultServerPort,
         securityContext: tls.securityContext(),
       );
+    }, successMessage: 'Server started.');
+
+    if (started) {
+      ref.read(hostRunningProvider.notifier).state = true;
+      ref.invalidate(lanUrlsProvider);
+      unawaited(_publishAndKeepAlive());
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _publishAndKeepAlive() async {
+    final appName = await (await ref.read(hostContainerProvider.future))
+        .settings
+        .readAppName();
+    try {
       await ref
           .read(hostAdvertiserProvider)
-          .advertise(name: appName, port: AppConfig.defaultServerPort);
-      // Keep the process (and this server) alive when backgrounded (PRD §13.3).
+          .advertise(name: appName, port: AppConfig.defaultServerPort)
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      if (mounted) {
+        showNbSnack(
+            context,
+            'Server is up, but LAN discovery failed (need Wi-Fi). '
+            'Clients can still connect by IP.',
+            ok: false);
+      }
+    }
+    try {
       await ref
           .read(hostKeepAliveProvider)
           .start(appName: appName, port: AppConfig.defaultServerPort);
-      ref.read(hostRunningProvider.notifier).state = true;
-      ref.invalidate(lanUrlsProvider);
-    }, successMessage: 'Server started.');
-    if (mounted) setState(() => _busy = false);
+    } catch (_) {/* notification permission etc. — logged inside */}
   }
 
   Future<void> _stopServer() async {
     setState(() => _busy = true);
     await runGuarded(context, () async {
-      await ref.read(hostKeepAliveProvider).stop();
-      await ref.read(hostAdvertiserProvider).stop();
+      // Best-effort teardown; the server stop is the one that matters.
+      await ref.read(hostKeepAliveProvider).stop().catchError((_) {});
+      await ref
+          .read(hostAdvertiserProvider)
+          .stop()
+          .timeout(const Duration(seconds: 5))
+          .catchError((_) {});
       await ref.read(hostServerProvider).stop();
       ref.read(hostRunningProvider.notifier).state = false;
     }, successMessage: 'Server stopped.');
