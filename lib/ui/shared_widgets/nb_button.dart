@@ -73,7 +73,8 @@ class NbButton extends StatelessWidget {
                   Icon(icon, size: 20, color: foreground),
                 if (busy || icon != null) const SizedBox(width: NbSpace.sm),
                 Text(label,
-                    style: NbType.label.copyWith(color: foreground, fontSize: 15)),
+                    style:
+                        NbType.label.copyWith(color: foreground, fontSize: 15)),
               ],
             ),
           ),

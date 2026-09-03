@@ -16,33 +16,33 @@ class MealWindow {
   const MealWindow({required this.start, required this.end});
 
   factory MealWindow.parse(Map<String, dynamic> json) => MealWindow(
-        start: _HhMm.parse(json['start'] as String),
-        end: _HhMm.parse(json['end'] as String),
+        start: HhMm.parse(json['start'] as String),
+        end: HhMm.parse(json['end'] as String),
       );
 
-  final _HhMm start;
-  final _HhMm end;
+  final HhMm start;
+  final HhMm end;
 
   bool contains(DateTime local) {
-    final t = _HhMm(local.hour, local.minute);
+    final t = HhMm(local.hour, local.minute);
     return !t.isBefore(start) && !t.isAfter(end);
   }
 }
 
-class _HhMm {
-  const _HhMm(this.hour, this.minute);
+class HhMm {
+  const HhMm(this.hour, this.minute);
 
-  factory _HhMm.parse(String s) {
+  factory HhMm.parse(String s) {
     final parts = s.split(':');
-    return _HhMm(int.parse(parts[0]), int.parse(parts[1]));
+    return HhMm(int.parse(parts[0]), int.parse(parts[1]));
   }
 
   final int hour;
   final int minute;
 
   int get _asMinutes => hour * 60 + minute;
-  bool isBefore(_HhMm other) => _asMinutes < other._asMinutes;
-  bool isAfter(_HhMm other) => _asMinutes > other._asMinutes;
+  bool isBefore(HhMm other) => _asMinutes < other._asMinutes;
+  bool isAfter(HhMm other) => _asMinutes > other._asMinutes;
 }
 
 /// Convert an aware UTC [dt] to the canteen's configured [tzName] (IANA).
@@ -79,7 +79,7 @@ MealType? currentMealType(DateTime local, Map<String, MealWindow> windows) {
   final loc = local.location;
   return (
     start: tz.TZDateTime(loc, local.year, local.month, local.day),
-    end: tz.TZDateTime(
-        loc, local.year, local.month, local.day, 23, 59, 59, 999),
+    end:
+        tz.TZDateTime(loc, local.year, local.month, local.day, 23, 59, 59, 999),
   );
 }

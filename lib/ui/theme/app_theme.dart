@@ -38,10 +38,12 @@ ThemeData buildNeobrutalismTheme() {
       foregroundColor: NbColors.ink,
       elevation: 0,
       centerTitle: false,
-      shape: Border(bottom: BorderSide(color: NbColors.ink, width: NbBorders.base)),
+      shape: Border(
+          bottom: BorderSide(color: NbColors.ink, width: NbBorders.base)),
       titleTextStyle: NbType.heading,
     ),
-    dividerTheme: const DividerThemeData(color: NbColors.ink, thickness: NbBorders.hair, space: 0),
+    dividerTheme: const DividerThemeData(
+        color: NbColors.ink, thickness: NbBorders.hair, space: 0),
     inputDecorationTheme: const InputDecorationTheme(
       filled: true,
       fillColor: NbColors.surface,
@@ -61,7 +63,8 @@ ThemeData buildNeobrutalismTheme() {
         borderRadius: NbBorders.radius,
         borderSide: BorderSide(color: NbColors.reject, width: NbBorders.base),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: NbSpace.md, vertical: NbSpace.md),
+      contentPadding:
+          EdgeInsets.symmetric(horizontal: NbSpace.md, vertical: NbSpace.md),
       labelStyle: NbType.label,
     ),
   );

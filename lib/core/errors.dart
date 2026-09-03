@@ -53,7 +53,8 @@ class ForbiddenException extends AppException {
 /// instead of a blank failure.
 class HostUnreachableException extends AppException {
   const HostUnreachableException([
-    super.message = 'The host device is not responding. It may be offline or on a different network.',
+    super.message =
+        'The host device is not responding. It may be offline or on a different network.',
   ]) : super(code: 'host_unreachable');
 }
 
@@ -62,6 +63,7 @@ class HostUnreachableException extends AppException {
 /// deliberately vague to the user; the real detail goes to the log.
 class InternalException extends AppException {
   const InternalException([
-    super.message = 'Something went wrong on the host. Check the host device logs.',
+    super.message =
+        'Something went wrong on the host. Check the host device logs.',
   ]) : super(code: 'internal');
 }

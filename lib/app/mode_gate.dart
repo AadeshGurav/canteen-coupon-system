@@ -47,9 +47,9 @@ class _ModePicker extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Set up this device', style: NbType.display),
+                  const Text('Set up this device', style: NbType.display),
                   const SizedBox(height: NbSpace.sm),
-                  Text(
+                  const Text(
                     'One app, two roles. You can change this later.',
                     style: NbType.body,
                   ),
@@ -58,9 +58,9 @@ class _ModePicker extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('HOST', style: NbType.heading),
+                        const Text('HOST', style: NbType.heading),
                         const SizedBox(height: NbSpace.xs),
-                        Text(
+                        const Text(
                           'This device runs the database and server for the '
                           'canteen. Other devices connect to it. Pick this for '
                           'the phone that stays at the canteen.',
@@ -79,9 +79,9 @@ class _ModePicker extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('CLIENT', style: NbType.heading),
+                        const Text('CLIENT', style: NbType.heading),
                         const SizedBox(height: NbSpace.xs),
-                        Text(
+                        const Text(
                           'This device connects to a host on the same Wi-Fi. '
                           'Pick this for a counter or scan-point phone.',
                           style: NbType.body,

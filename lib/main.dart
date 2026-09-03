@@ -8,8 +8,16 @@ import 'ui/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final overrides = await bootstrap();
-  runApp(ProviderScope(overrides: overrides, child: const CanteenApp()));
+  final b = await bootstrap();
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(b.prefs),
+        appModeStoreProvider.overrideWithValue(b.modeStore),
+      ],
+      child: const CanteenApp(),
+    ),
+  );
 }
 
 class CanteenApp extends StatelessWidget {

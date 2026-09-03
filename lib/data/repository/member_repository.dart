@@ -45,7 +45,8 @@ class BulkResult {
 }
 
 class BulkFailure {
-  const BulkFailure({required this.index, required this.name, required this.error});
+  const BulkFailure(
+      {required this.index, required this.name, required this.error});
 
   final int index;
   final String name;

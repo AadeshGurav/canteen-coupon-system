@@ -13,7 +13,8 @@ class NbColors {
 
   // 60% — ground
   static const surfaceBg = Color(0xFFF5F1E8); // warm off-white
-  static const ink = Color(0xFF1A1A1A); // primary text / borders (AA on all surfaces below)
+  static const ink =
+      Color(0xFF1A1A1A); // primary text / borders (AA on all surfaces below)
 
   // 30% — surfaces
   static const surface = Color(0xFFFFFFFF);
@@ -43,7 +44,8 @@ class NbBorders {
   static const double base = 3.0; // restrained variant (admin data surfaces)
   static const double bold = 5.0; // full intensity (scan result, primary CTA)
 
-  static const BorderRadius radius = BorderRadius.zero; // neobrutalism: no rounding
+  static const BorderRadius radius =
+      BorderRadius.zero; // neobrutalism: no rounding
 }
 
 /// Hard, offset drop shadows. Weight scales with intensity (PRD §14.2).
@@ -75,16 +77,33 @@ class NbSpace {
 class NbType {
   const NbType._();
 
-  static const String family = 'RobotoMono'; // blocky, monospaced — falls back to system mono
+  static const String family =
+      'RobotoMono'; // blocky, monospaced — falls back to system mono
 
   static const TextStyle display = TextStyle(
-      fontFamily: family, fontSize: 34, fontWeight: FontWeight.w700, color: NbColors.ink, height: 1.1);
+      fontFamily: family,
+      fontSize: 34,
+      fontWeight: FontWeight.w700,
+      color: NbColors.ink,
+      height: 1.1);
   static const TextStyle heading = TextStyle(
-      fontFamily: family, fontSize: 22, fontWeight: FontWeight.w700, color: NbColors.ink, height: 1.2);
+      fontFamily: family,
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      color: NbColors.ink,
+      height: 1.2);
   static const TextStyle body = TextStyle(
-      fontFamily: family, fontSize: 16, fontWeight: FontWeight.w400, color: NbColors.ink, height: 1.4);
+      fontFamily: family,
+      fontSize: 16,
+      fontWeight: FontWeight.w400,
+      color: NbColors.ink,
+      height: 1.4);
   static const TextStyle label = TextStyle(
-      fontFamily: family, fontSize: 13, fontWeight: FontWeight.w700, color: NbColors.ink, height: 1.2);
+      fontFamily: family,
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      color: NbColors.ink,
+      height: 1.2);
 }
 
 /// The two intensity levels from PRD §14.2, passed to shared widgets so a

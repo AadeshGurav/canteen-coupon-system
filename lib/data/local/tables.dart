@@ -37,8 +37,7 @@ class Members extends Table {
   IntColumn get graceAllowanceOverride => integer().nullable()();
 
   /// 'active' | 'inactive' — inactive fails scans with a clear reason.
-  TextColumn get status =>
-      text().withDefault(const Constant('active'))();
+  TextColumn get status => text().withDefault(const Constant('active'))();
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -50,8 +49,7 @@ class Members extends Table {
 // --------------------------------------------------------------------------
 class Scans extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get memberId =>
-      integer().references(Members, #id)();
+  IntColumn get memberId => integer().references(Members, #id)();
   TextColumn get mealType => text()();
   DateTimeColumn get scannedAt => dateTime()();
 
@@ -250,8 +248,7 @@ class Notifications extends Table {
   TextColumn get visibleRolesJson => text()();
 
   /// JSON array of usernames that dismissed it (per-user, PRD §6.5.2).
-  TextColumn get dismissedByJson =>
-      text().withDefault(const Constant('[]'))();
+  TextColumn get dismissedByJson => text().withDefault(const Constant('[]'))();
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -298,10 +295,8 @@ class AppSettings extends Table {
   TextColumn get appName =>
       text().withDefault(const Constant('Canteen Coupon System'))();
 
-  IntColumn get prepLeadMinutes =>
-      integer().withDefault(const Constant(60))();
-  IntColumn get purchaseLeadDays =>
-      integer().withDefault(const Constant(1))();
+  IntColumn get prepLeadMinutes => integer().withDefault(const Constant(60))();
+  IntColumn get purchaseLeadDays => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {id};
