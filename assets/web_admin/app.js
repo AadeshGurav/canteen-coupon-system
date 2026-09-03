@@ -365,7 +365,7 @@ views.scans = async () => {
           const r = await guard(() => api.post('/scan/reverse', { scanId: s.id }));
           if (r && r.success) { toast(r.message); render(); }
           else if (r) toast(r.message, false);
-        } }, 'Reverse') : '')))));
+        } }, 'Reverse') : ''))))));
 };
 
 // menu calendar ------------------------------------------------------

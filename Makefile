@@ -25,6 +25,7 @@ apk:
 
 analyze:
 	dart analyze --fatal-infos
+	node --check assets/web_admin/app.js
 
 test:
 	flutter test
