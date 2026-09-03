@@ -1,20 +1,15 @@
 version: 2
 updates:
-  # requirements.txt / requirements-dev.txt
-  - package-ecosystem: "pip"
+  # pub packages in pubspec.yaml. Grouped so a single PR covers a bump wave;
+  # review what changed before merging (CLAUDE.md §10). Note the exact pin on
+  # flutter_foreground_task — see docs/PRD.md §13.3 before accepting a bump.
+  - package-ecosystem: "pub"
     directory: "/"
     schedule:
       interval: "weekly"
     groups:
-      python-dependencies:
+      dart-dependencies:
         patterns: ["*"]
-    open-pull-requests-limit: 5
-
-  # Dockerfile base images + docker-compose.yml image tags (mongo, nginx)
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
     open-pull-requests-limit: 5
 
   # Action versions pinned in .github/workflows/*.yml
