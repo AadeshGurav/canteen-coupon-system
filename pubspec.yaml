@@ -1,0 +1,89 @@
+name: canteen_coupon
+description: >-
+  Canteen unit-based coupon system — a single native Flutter app that runs as
+  either the LAN host (embedded server + on-device database) or a client, from
+  the same APK. See docs/PRD.md §13–§14.
+publish_to: none
+version: 2.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+# Version constraints follow PRD §13.3 verbatim where it pinned one. The PRD's
+# own instruction is to run `flutter pub outdated` at build time and bump
+# deliberately (CLAUDE.md §10) — not to re-decide the package choices, which
+# §13.3 settled.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # --- State management / DI (PRD §13.3) ---
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # --- Embedded HTTP server, host mode only (PRD §13.3, §13.4) ---
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_static: ^1.1.2
+
+  # --- On-device database, host mode only (PRD §13.3) ---
+  drift: ^2.21.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # --- LAN discovery (PRD §13.3, §13.5) ---
+  nsd: ^5.0.1
+
+  # --- QR scanning / generation (PRD §13.3) ---
+  mobile_scanner: ^7.2.0
+  qr_flutter: ^4.1.0
+
+  # --- PDF bill generation (PRD §13.3) ---
+  pdf: ^3.11.1
+  printing: ^5.13.4
+
+  # --- Self-signed TLS cert for the desktop-admin surface (PRD §13.6) ---
+  #  Native Dart key/cert generation — no mkcert, no shelling out.
+  basic_utils: ^5.8.1
+  pointycastle: ^3.9.1
+
+  # --- Host server as an Android foreground service (PRD §13.3) ---
+  #  EXACT pin, not a caret: §13.3 flags a reported CDN hash mismatch on a
+  #  9.1.0 build. Verify the resolved archive's SHA-256 against the upstream
+  #  GitHub release before trusting `pub get`, and keep pubspec.lock pinned.
+  flutter_foreground_task: 8.17.0
+
+  # --- IANA timezone conversion (PRD §6.8) ---
+  #  Not in §13.3's table, but §6.8 requires meal windows to resolve in the
+  #  canteen's own IANA zone and Dart's core library ships no tz database.
+  #  `timezone` is the standard pure-Dart implementation (the analog of
+  #  Python's stdlib `zoneinfo` the v1 build used) — no native dependency.
+  timezone: ^0.9.4
+
+  # --- Small cross-cutting helpers ---
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+  crypto: ^3.0.5
+  collection: ^1.18.0
+  intl: ^0.19.0
+  logging: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13
+  drift_dev: ^2.21.0
+  riverpod_generator: ^2.6.1
+  custom_lint: ^0.7.0
+  riverpod_lint: ^2.6.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/web_admin/

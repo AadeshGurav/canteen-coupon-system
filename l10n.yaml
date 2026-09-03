@@ -1,0 +1,7 @@
+# i18n-ready from day one (CLAUDE.md §13). Only English ships now; strings live
+# in resource files, not in code, so a second locale is additive.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppText
+nullable-getter: false
