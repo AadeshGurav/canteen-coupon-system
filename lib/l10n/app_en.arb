@@ -1,0 +1,41 @@
+{
+  "@@locale": "en",
+  "appTitle": "Canteen Coupon System",
+  "@appTitle": { "description": "Default app name; overridden at runtime by the branding setting (PRD §6.8)." },
+
+  "modeSetupTitle": "Set up this device",
+  "modeSetupSubtitle": "One app, two roles. You can change this later.",
+  "modeHostName": "HOST",
+  "modeHostBlurb": "This device runs the database and server for the canteen. Other devices connect to it.",
+  "modeHostAction": "Run as host",
+  "modeClientName": "CLIENT",
+  "modeClientBlurb": "This device connects to a host on the same Wi-Fi.",
+  "modeClientAction": "Run as client",
+  "modeChange": "Change mode",
+
+  "hostUnreachable": "The host device is not responding. It may be offline or on a different network.",
+  "@hostUnreachable": { "description": "Client-mode error state (PRD §13.2)." },
+  "retry": "Retry",
+  "rediscover": "Find host again",
+
+  "scanAccepted": "{name} — {meal}. {remaining} left.",
+  "@scanAccepted": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "meal": { "type": "String" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "scanViaGrace": "on grace allowance",
+  "scanUnknownCode": "No member found for this code.",
+  "scanInactive": "This member's account is inactive.",
+  "scanNoWindow": "No meal is currently being served.",
+  "scanAlreadyDone": "{name} has already collected {meal} today.",
+  "@scanAlreadyDone": {
+    "placeholders": { "name": { "type": "String" }, "meal": { "type": "String" } }
+  },
+  "scanNoUnits": "{name} has no {meal} units left.",
+  "@scanNoUnits": {
+    "placeholders": { "name": { "type": "String" }, "meal": { "type": "String" } }
+  }
+}
