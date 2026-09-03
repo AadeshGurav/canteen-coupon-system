@@ -13,12 +13,18 @@ import 'routes_auth.dart';
 import 'routes_members.dart';
 import 'routes_planning.dart';
 
-/// The embedded HTTP server (PRD §13.4). One `shelf` pipeline serving two
-/// audiences from the same host process and the same service layer:
+/// The embedded server (PRD §13.4). One `shelf` pipeline, but bound to **two
+/// listeners** so the two audiences never fight over TLS:
 ///
-///  * `/api/...`  — JSON, consumed by client-mode app instances on the LAN.
-///  * everything else — a static HTML/JS desktop-admin bundle (bulk data entry
-///    on a real keyboard). Scanning is native-app-only, never here (PRD §13.6).
+///  * plain **HTTP on [port]** — always. This is what client-mode app instances
+///    talk to (PRD §13.6: "plain HTTP between two native app instances is
+///    acceptable" on the closed LAN), and what `nsd` advertises.
+///  * **HTTPS on [port] + 1** — only when a self-signed cert exists. This is the
+///    optional encrypted surface for a desktop browser (PRD §13.6); a client
+///    never needs it, so it can't trip over the untrusted-cert error.
+///
+/// Both listeners serve the same handler: `/api/...` JSON plus the static
+/// HTML/JS desktop-admin bundle.
 class HostServer {
   HostServer(this._container, {this.staticRoot});
 
@@ -31,9 +37,17 @@ class HostServer {
 
   final _log = log('server');
   HttpServer? _http;
+  HttpServer? _https;
 
   bool get isRunning => _http != null;
+
+  /// The port client apps connect to (plain HTTP).
   int? get port => _http?.port;
+  int? get httpPort => _http?.port;
+
+  /// The encrypted desktop-browser port, or null when no cert is loaded.
+  int? get httpsPort => _https?.port;
+
   String? get address => _http?.address.address;
 
   /// Non-loopback IPv4 addresses this device is reachable at — for showing the
@@ -49,8 +63,8 @@ class HostServer {
     return out;
   }
 
-  /// Starts listening on [bind]:[port]. If [securityContext] is given the
-  /// server speaks HTTPS with that certificate (PRD §13.6's self-signed cert).
+  /// Binds plain HTTP on [port] (always) and, when [securityContext] is given,
+  /// HTTPS on [port] + 1 as well.
   Future<void> start({
     String bind = '0.0.0.0',
     required int port,
@@ -63,18 +77,33 @@ class HostServer {
         .addMiddleware(errorMiddleware())
         .addHandler(_root());
 
-    _http = securityContext == null
-        ? await shelf_io.serve(handler, bind, port)
-        : await shelf_io.serve(handler, bind, port,
-            securityContext: securityContext);
+    _http = await shelf_io.serve(handler, bind, port);
     _http!.autoCompress = true;
-    _log.info('listening on ${securityContext == null ? 'http' : 'https'}://'
-        '${_http!.address.address}:${_http!.port}  static=${staticRoot ?? '(none)'}');
+    _log.info(
+        'http listening on http://${_http!.address.address}:${_http!.port}'
+        '  static=${staticRoot ?? '(none)'}');
+
+    if (securityContext != null) {
+      try {
+        _https = await shelf_io.serve(handler, bind, port + 1,
+            securityContext: securityContext);
+        _https!.autoCompress = true;
+        _log.info('https listening on '
+            'https://${_https!.address.address}:${_https!.port}');
+      } catch (e, st) {
+        // HTTP is up and clients are fine — the encrypted desktop port is
+        // optional, so log and carry on rather than fail the whole start.
+        _log.severe('https listener failed to bind on ${port + 1}', e, st);
+        _https = null;
+      }
+    }
   }
 
   Future<void> stop() async {
     await _http?.close(force: true);
+    await _https?.close(force: true);
     _http = null;
+    _https = null;
     _log.info('stopped');
   }
 

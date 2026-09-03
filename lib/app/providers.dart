@@ -115,11 +115,26 @@ final hostAdvertiserProvider = Provider<HostAdvertiser>((ref) {
   return advertiser;
 });
 
-/// LAN URLs a desktop browser can open once the server is running.
-final lanUrlsProvider = FutureProvider.autoDispose<List<String>>((ref) async {
-  if (!ref.watch(hostRunningProvider)) return const [];
+/// LAN URLs a desktop browser can open once the server is running — the plain
+/// HTTP ones always, plus the HTTPS ones when a cert is loaded (§13.6).
+class LanUrls {
+  const LanUrls({required this.http, required this.https});
+  final List<String> http;
+  final List<String> https;
+}
+
+final lanUrlsProvider = FutureProvider.autoDispose<LanUrls>((ref) async {
+  if (!ref.watch(hostRunningProvider)) {
+    return const LanUrls(http: [], https: []);
+  }
+  final server = ref.read(hostServerProvider);
   final addrs = await HostServer.lanAddresses();
-  return addrs.map((a) => 'http://$a:${AppConfig.defaultServerPort}/').toList();
+  return LanUrls(
+    http: [for (final a in addrs) 'http://$a:${server.httpPort}/'],
+    https: server.httpsPort == null
+        ? const []
+        : [for (final a in addrs) 'https://$a:${server.httpsPort}/'],
+  );
 });
 
 /// True once the operator has started the server from the host console.

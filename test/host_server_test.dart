@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:canteen_coupon/data/local/database.dart';
 import 'package:canteen_coupon/server/host_container.dart';
 import 'package:canteen_coupon/server/server.dart';
+import 'package:canteen_coupon/server/tls.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -40,7 +41,8 @@ void main() {
 
     // A stand-in for the materialized web-admin bundle.
     final webDir = Directory('${tmp.path}/web_admin')..createSync();
-    File('${webDir.path}/index.html').writeAsStringSync('<!doctype html><h1>admin</h1>');
+    File('${webDir.path}/index.html')
+        .writeAsStringSync('<!doctype html><h1>admin</h1>');
     File('${webDir.path}/styles.css').writeAsStringSync('body{color:#000}');
 
     server = HostServer(container, staticRoot: webDir.path);
@@ -138,7 +140,8 @@ void main() {
       },
     });
     final m = await _send(http, 'POST', '$base/api/members',
-        token: adminToken, body: {'type': 'staff', 'name': 'Ravi', 'staffId': 'S1'});
+        token: adminToken,
+        body: {'type': 'staff', 'name': 'Ravi', 'staffId': 'S1'});
     final qr = m.json['qrCodeId'] as String;
 
     // Balance 0, grace 1 → scan accepted on grace, flagged, balance → -1.
@@ -151,10 +154,11 @@ void main() {
     // A second member with grace OFF and a zero balance → hard stop.
     await _send(http, 'PATCH', '$base/api/settings',
         token: adminToken, body: {'graceAllowanceEnabled': false});
-    final m2 = await _send(http, 'POST', '$base/api/members', token: adminToken,
+    final m2 = await _send(http, 'POST', '$base/api/members',
+        token: adminToken,
         body: {'type': 'staff', 'name': 'Sita', 'staffId': 'S2'});
-    final stop = await _send(http, 'POST', '$base/api/scan', token: adminToken,
-        body: {'qrCodeId': m2.json['qrCodeId']});
+    final stop = await _send(http, 'POST', '$base/api/scan',
+        token: adminToken, body: {'qrCodeId': m2.json['qrCodeId']});
     expect(stop.json['outcome'], 'rejected_zero_balance');
   });
 
@@ -162,6 +166,39 @@ void main() {
     final res = await _send(http, 'POST', '$base/api/scan',
         token: adminToken, body: {'qrCodeId': 'nope-nope-nope'});
     expect(res.json['outcome'], 'rejected_unknown_code');
+  });
+
+  test('with a cert: plain HTTP on the port, HTTPS on port+1, both serve',
+      () async {
+    final tls = SelfSignedTls(tmp.path);
+    await tls.generate();
+
+    final dual = HostServer(container);
+    const p = 8791; // fixed so port+1 is predictable and free
+    await dual.start(
+      bind: '127.0.0.1',
+      port: p,
+      securityContext: tls.securityContext(),
+    );
+    addTearDown(dual.stop);
+
+    expect(dual.httpPort, p);
+    expect(dual.httpsPort, p + 1);
+
+    // Client-style plain HTTP works.
+    final plain =
+        await _send(http, 'GET', 'http://127.0.0.1:$p/api/settings/branding');
+    expect(plain.status, 200);
+
+    // HTTPS on port+1 works (accept the self-signed cert).
+    final tlsClient = HttpClient()
+      ..badCertificateCallback = (_, __, ___) => true;
+    final req = await tlsClient
+        .getUrl(Uri.parse('https://127.0.0.1:${p + 1}/api/settings/branding'));
+    final res = await req.close();
+    expect(res.statusCode, 200);
+    await res.drain<void>();
+    tlsClient.close(force: true);
   });
 
   test('desktop-admin web bundle is served at / and its assets', () async {
@@ -180,7 +217,8 @@ void main() {
 
   test('?token= query param authenticates a browser file download', () async {
     final m = await _send(http, 'POST', '$base/api/members',
-        token: adminToken, body: {'type': 'staff', 'name': 'Q', 'staffId': 'Q1'});
+        token: adminToken,
+        body: {'type': 'staff', 'name': 'Q', 'staffId': 'Q1'});
     final id = m.json['id'];
 
     Future<int> statusOf(String url) async {

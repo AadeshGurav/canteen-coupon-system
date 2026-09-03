@@ -64,10 +64,12 @@ settings, users. Bill PDFs open in a new tab.
 
 If the box says "No LAN address found", the host phone isn't on Wi-Fi.
 
-**Optional HTTPS:** tap **Generate certificate** on the host console to
-encrypt that login over the LAN. A self-signed certificate still shows a
-browser "not trusted" warning the first time each computer connects — only a
-real CA removes that. It does **not** affect phone-to-phone use.
+**Optional HTTPS:** tap **Generate certificate** on the host console. The
+server then *also* listens on `https://<ip>:8711/` — the console shows that
+URL too. It's plain HTTP and HTTPS side by side: phones always use the HTTP
+port, so generating a cert never affects phone-to-phone use. The HTTPS URL
+still shows a browser "not trusted" warning the first time each computer
+connects — only a real CA removes that.
 
 ### 2.4 Keeping the host awake
 

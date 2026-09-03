@@ -186,28 +186,39 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
                   ),
                   if (running && server != null) ...[
                     const SizedBox(height: NbSpace.sm),
-                    Text('Listening on port ${server.port}',
+                    Text(
+                        'Client phones connect on port ${server.httpPort}'
+                        '${server.httpsPort != null ? ' · desktop HTTPS on ${server.httpsPort}' : ''}',
                         style: NbType.body),
                     const Text(
                         'Advertised as "${AppConfig.discoveryServiceType}"',
                         style: NbType.body),
                     const SizedBox(height: NbSpace.sm),
-                    const Text(
-                        'DESKTOP ADMIN — open one of these in a browser '
-                        'on a computer on the same Wi-Fi:',
-                        style: NbType.label),
                     ref.watch(lanUrlsProvider).maybeWhen(
                           data: (urls) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: urls.isEmpty
-                                ? [
-                                    const Text(
-                                        'No LAN address found — check Wi-Fi.',
-                                        style: NbType.body)
-                                  ]
-                                : [
-                                    for (final u in urls) _CopyableUrl(url: u),
-                                  ],
+                            children: [
+                              if (urls.http.isEmpty)
+                                const Text(
+                                    'No LAN address found — check Wi-Fi.',
+                                    style: NbType.body)
+                              else ...[
+                                const Text(
+                                    'DESKTOP ADMIN — open in a browser on the '
+                                    'same Wi-Fi:',
+                                    style: NbType.label),
+                                for (final u in urls.http) _CopyableUrl(url: u),
+                                if (urls.https.isNotEmpty) ...[
+                                  const SizedBox(height: NbSpace.xs),
+                                  const Text(
+                                      'Encrypted (one "not trusted" warning '
+                                      'per computer):',
+                                      style: NbType.label),
+                                  for (final u in urls.https)
+                                    _CopyableUrl(url: u),
+                                ],
+                              ],
+                            ],
                           ),
                           orElse: () => const SizedBox.shrink(),
                         ),
