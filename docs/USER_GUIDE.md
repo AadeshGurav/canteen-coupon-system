@@ -25,63 +25,81 @@ scanned.
 ### 2.1 Pick a host device
 
 One phone is the **host**: it holds the database and serves the others. Pick
-the phone that stays at the canteen and is on power during meal times.
+the phone that stays at the canteen and is on power during meal times —
+**preferably an Android phone** (an iPhone host can only serve while the app
+is open on screen; see 2.4).
 
 1. Install and open the app on that phone.
 2. On the setup screen, tap **Run as host**.
-3. On the host console, tap **Start server**. It shows its address and starts
-   advertising itself on the Wi-Fi.
-4. The first time only, the console shows a generated **admin password** for
-   username `admin`. Write it down — it is shown once and never logged. Sign
-   in and change it from **Users**.
+3. It goes straight to **sign in**. The server starts serving on the Wi-Fi on
+   its own in the background — there is no separate "start server" step.
+4. The first time only, the sign-in screen shows a generated **admin
+   password** for username `admin`. Write it down — it is shown once and never
+   logged. Sign in and change it from **Users**.
 
 Every other device installs the same app and taps **Run as client**, then
-picks the host from the list (no IP typing). All devices must be on the same
-Wi-Fi.
+picks the host from the list. If it doesn't appear (some routers block
+device-to-device discovery), tap **Connect by IP address** and type the
+host's address — see it on the host under **Admin ▸ Hosting & LAN**.
 
 You can change a device's role later from the ↔ icon in the top bar.
 
-### 2.2 Scanning
+### 2.2 Managing the host (Admin ▸ Hosting & LAN)
+
+Sign in on the host as **admin** and open **Hosting & LAN** (also a card at
+the top of **Settings**). It shows:
+
+- whether the server is **serving**, and the exact URL(s) other devices use;
+- **Stop / Restart** serving (rarely needed — it auto-starts);
+- **Generate certificate** for optional HTTPS (see 2.3);
+- the keep-awake reminder (2.4).
+
+The admin dashboard shows a yellow banner if the host is *not* serving.
+
+### 2.3 Scanning
 
 Scanning uses the phone camera directly — grant the camera permission when
-asked. There is **no HTTPS requirement** for scanning anymore.
+asked. There is **no HTTPS requirement** for scanning.
 
-### 2.3 Desktop admin (browser)
+### 2.4 Desktop admin (browser)
 
 For heavy data entry, a full admin runs in a desktop browser — served by the
-host phone itself. On the host console, once the server is running, the
-**DESKTOP ADMIN** box shows the exact URL(s), e.g.:
+host phone itself. Under **Admin ▸ Hosting & LAN**, the **DESKTOP ADMIN** box
+shows the exact URL(s), e.g.:
 
 ```
 http://192.168.1.42:8710/
 ```
 
 Open that on any computer on the same Wi-Fi and sign in with an **admin** (or
-**counter**) account. It covers everything except scanning (that stays on the
-phone): members, top-ups & billing, scan log & reversal, menu calendar,
-categories, ingredients, recipes, purchase schedule, expenses, refunds,
-settings, users. Bill PDFs open in a new tab.
+**counter**) account. It covers everything except scanning: members, top-ups
+& billing, scan log & reversal, menu calendar (month grid), categories,
+ingredients, recipes, purchase schedule, expenses, refunds, settings, users.
+Bill PDFs open in a new tab. Use the plain `http://` URL — it's faster than
+the HTTPS one.
 
-If the box says "No LAN address found", the host phone isn't on Wi-Fi.
+**Optional HTTPS:** tap **Generate certificate** under Hosting & LAN, then
+**Restart** serving. The server then *also* listens on `https://<ip>:8711/`.
+Phones always use the HTTP port, so a cert never affects phone-to-phone use.
+The HTTPS URL still shows a browser "not trusted" warning the first time each
+computer connects — only a real CA removes that.
 
-**Optional HTTPS:** tap **Generate certificate** on the host console. The
-server then *also* listens on `https://<ip>:8711/` — the console shows that
-URL too. It's plain HTTP and HTTPS side by side: phones always use the HTTP
-port, so generating a cert never affects phone-to-phone use. The HTTPS URL
-still shows a browser "not trusted" warning the first time each computer
-connects — only a real CA removes that.
+### 2.5 Keeping the host awake
 
-### 2.4 Keeping the host awake
+While serving, the app keeps the screen from timing out.
 
-When you start the server, the host phone shows a persistent notification and
-runs a foreground service so Android doesn't kill it mid-shift. Allow the
-notification permission when asked. Keep the phone on power and on Wi-Fi;
-don't "force stop" the app.
+- **Android:** a persistent notification + foreground service keep the server
+  running even with the screen off. Allow the notification permission when
+  asked. Keep the phone on power and on Wi-Fi; don't "force stop" the app.
+- **iPhone:** iOS **cannot** keep the server running in the background. Leave
+  the app open and on screen for the whole meal service — locking the phone
+  or switching apps stops the server and every client drops. iOS also can't
+  create its own Wi-Fi: everyone must be on the same router, or turn on
+  **Personal Hotspot** (Settings ▸ Personal Hotspot) and have the other
+  phones join it. For a full shift, host on Android.
 
-The app also keeps the screen from timing out while the server is running, and
-the host console shows a **KEEP THIS PHONE AWAKE** reminder. Leave the app open
-and in the foreground: locking the phone or switching apps pauses the server
-(on iOS it stops entirely) and every client drops.
+This is shown as a banner on the iPhone during host setup and under Hosting
+& LAN.
 
 ---
 
@@ -159,11 +177,12 @@ or delete your own account.
 
 ## 4. If something's wrong
 
-- **A client says "host unreachable"** — the host phone is off, asleep, or on a
-  different Wi-Fi. Wake it, confirm the server is running on its console, and
-  tap **Retry** / **Find host again**.
-- **Camera won't open** — grant the camera permission in Android settings for
-  Canteen Coupon.
+- **A client says "host unreachable"** — the host phone is off, asleep, on a
+  different Wi-Fi, or (iPhone) the app was backgrounded. Wake it, check
+  **Admin ▸ Hosting & LAN** shows *serving*, and tap **Retry** / **Find host
+  again**. If discovery won't find it, use **Connect by IP address**.
+- **Camera won't open** — grant the camera permission in the OS settings for
+  Tiffin.
 - **Host logs** — the host writes a rolling log file on its own storage
   (`logs/app.log` under the app's documents directory) recording every scan,
   top-up, refund, and admin action.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
@@ -17,6 +19,7 @@ import '../domain/ops.dart';
 import '../server/host_container.dart';
 import '../server/host_keep_alive.dart';
 import '../server/server.dart';
+import '../server/tls.dart';
 import '../server/web_admin_assets.dart';
 import 'bootstrap.dart';
 export 'bootstrap.dart' show appModeStoreProvider, sharedPreferencesProvider;
@@ -138,8 +141,153 @@ final lanUrlsProvider = FutureProvider.autoDispose<LanUrls>((ref) async {
   );
 });
 
-/// True once the operator has started the server from the host console.
+/// True while the embedded LAN server is listening. Written by
+/// [HostServingController]; read by [lanUrlsProvider] and [hostWakelockProvider].
 final hostRunningProvider = StateProvider<bool>((_) => false);
+
+/// Owns the LAN server lifecycle: start/stop, mDNS advertise, the Android
+/// keep-alive service, and the optional self-signed cert. A host *serves* — so
+/// [ModeGate] calls [ensureStarted] the moment the database is ready, before
+/// anyone signs in. The admin manages it afterwards from Admin → Hosting; it is
+/// no longer a pre-login console (that surface is gone).
+class HostServingState {
+  const HostServingState({
+    this.running = false,
+    this.busy = false,
+    this.certExpiry,
+    this.discoveryOk = true,
+    this.lastError,
+  });
+
+  final bool running;
+  final bool busy;
+
+  /// `yyyy-mm-dd` of the loaded cert, or null when none has been generated.
+  final String? certExpiry;
+
+  /// False once an advertise attempt has failed (no Wi-Fi) — clients then need
+  /// the manual "Connect by IP" path.
+  final bool discoveryOk;
+  final String? lastError;
+
+  HostServingState copyWith({
+    bool? running,
+    bool? busy,
+    String? certExpiry,
+    bool? discoveryOk,
+    String? lastError,
+    bool clearError = false,
+  }) =>
+      HostServingState(
+        running: running ?? this.running,
+        busy: busy ?? this.busy,
+        certExpiry: certExpiry ?? this.certExpiry,
+        discoveryOk: discoveryOk ?? this.discoveryOk,
+        lastError: clearError ? null : (lastError ?? this.lastError),
+      );
+}
+
+class HostServingController extends Notifier<HostServingState> {
+  @override
+  HostServingState build() => const HostServingState();
+
+  bool _transitioning = false;
+
+  Future<String> get _docsDir async =>
+      (await ref.read(hostContainerProvider.future)).artifacts.baseDir;
+
+  /// Idempotent — safe to call on every rebuild of [ModeGate].
+  Future<void> ensureStarted() async {
+    if (state.running || _transitioning) return;
+    await start();
+  }
+
+  Future<void> start() async {
+    if (state.running || _transitioning) return;
+    _transitioning = true;
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final tls = SelfSignedTls(await _docsDir);
+      final server = ref.read(hostServerProvider)
+        ..staticRoot = await ref.read(webAdminDirProvider.future);
+      await server.start(
+        port: AppConfig.defaultServerPort,
+        securityContext: tls.securityContext(),
+      );
+      ref.read(hostRunningProvider.notifier).state = true;
+      ref.invalidate(lanUrlsProvider);
+      state = state.copyWith(running: true, busy: false);
+      unawaited(_publishAndKeepAlive());
+    } catch (e) {
+      state = state.copyWith(busy: false, lastError: '$e');
+    } finally {
+      _transitioning = false;
+    }
+  }
+
+  Future<void> _publishAndKeepAlive() async {
+    final container = await ref.read(hostContainerProvider.future);
+    final appName = await container.settings.readAppName();
+    try {
+      await ref
+          .read(hostAdvertiserProvider)
+          .advertise(name: appName, port: AppConfig.defaultServerPort)
+          .timeout(const Duration(seconds: 8));
+      state = state.copyWith(discoveryOk: true);
+    } catch (_) {
+      state = state.copyWith(discoveryOk: false);
+    }
+    try {
+      await ref
+          .read(hostKeepAliveProvider)
+          .start(appName: appName, port: AppConfig.defaultServerPort);
+    } catch (_) {
+      // Notification permission etc. — logged inside HostKeepAlive.
+    }
+  }
+
+  Future<void> stop() async {
+    if (_transitioning) return;
+    _transitioning = true;
+    state = state.copyWith(busy: true);
+    try {
+      await ref.read(hostKeepAliveProvider).stop().catchError((_) {});
+      await ref
+          .read(hostAdvertiserProvider)
+          .stop()
+          .timeout(const Duration(seconds: 5))
+          .catchError((_) {});
+      await ref.read(hostServerProvider).stop();
+    } finally {
+      ref.read(hostRunningProvider.notifier).state = false;
+      ref.invalidate(lanUrlsProvider);
+      state = state.copyWith(running: false, busy: false);
+      _transitioning = false;
+    }
+  }
+
+  Future<void> restart() async {
+    await stop();
+    await start();
+  }
+
+  Future<void> generateCert() async {
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final expiry = await SelfSignedTls(await _docsDir).generate();
+      state = state.copyWith(
+        busy: false,
+        certExpiry: expiry.toLocal().toString().split(' ').first,
+      );
+    } catch (e) {
+      state = state.copyWith(busy: false, lastError: '$e');
+    }
+  }
+}
+
+final hostServingProvider =
+    NotifierProvider<HostServingController, HostServingState>(
+        HostServingController.new);
 
 /// Holds the screen awake for as long as the host server is running (PRD §13.3).
 ///

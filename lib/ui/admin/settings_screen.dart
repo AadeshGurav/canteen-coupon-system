@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/app_mode.dart';
 import '../../data/backend.dart';
 import '../../domain/settings.dart';
 import '../shared_widgets/nb_button.dart';
@@ -9,6 +10,7 @@ import '../shared_widgets/nb_feedback.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../shared_widgets/nb_text_field.dart';
 import '../theme/tokens.dart';
+import 'hosting_screen.dart';
 
 final _settingsProvider = FutureProvider.autoDispose<SettingsSnapshot>(
     (ref) => ref.watch(backendProvider).getSettings());
@@ -103,9 +105,41 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   @override
   Widget build(BuildContext context) {
     final zones = ref.watch(_timezonesProvider).asData?.value ?? [_timezone];
+    final isHost = ref.watch(currentModeProvider) == AppMode.host;
+    final serving = isHost && ref.watch(hostRunningProvider);
     return ListView(
       padding: const EdgeInsets.all(NbSpace.lg),
       children: [
+        if (isHost) ...[
+          NbSurface(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const HostingScreen()),
+            ),
+            child: Row(
+              children: [
+                Icon(serving ? Icons.wifi_tethering : Icons.wifi_off,
+                    color: serving ? NbColors.accept : NbColors.reject),
+                const SizedBox(width: NbSpace.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('HOSTING & LAN', style: NbType.label),
+                      Text(
+                        serving
+                            ? 'Serving. Manage URLs, restart, certificate.'
+                            : 'Not serving. Tap to start.',
+                        style: NbType.body,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: NbColors.ink),
+              ],
+            ),
+          ),
+          const SizedBox(height: NbSpace.sm),
+        ],
         _section('Branding'),
         NbTextField(label: 'App name', controller: _appName),
         _section('Unit prices (Rs.)'),

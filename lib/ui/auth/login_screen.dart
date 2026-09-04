@@ -1,8 +1,12 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/app_mode.dart';
 import '../../core/errors.dart';
+import '../shared_widgets/ios_host_advisory.dart';
 import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../shared_widgets/nb_text_field.dart';
@@ -40,9 +44,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(sessionProvider.notifier)
           .login(_username.text.trim(), _password.text);
-      // This screen is always PUSHED (from the host console / discovery
-      // screen), so ModeGate swapping its home underneath isn't enough —
-      // pop back to it, or the operator keeps staring at the login form.
+      // This screen can be PUSHED (from the client discovery screen), so
+      // ModeGate swapping its home underneath isn't enough — pop back to the
+      // root, or the operator keeps staring at the login form.
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
@@ -58,6 +62,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final branding = ref.watch(_brandingProvider);
+    final isHost = ref.watch(currentModeProvider) == AppMode.host;
+    final firstRunPassword = ref.watch(generatedAdminPasswordProvider);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -65,43 +71,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             padding: const EdgeInsets.all(NbSpace.lg),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
-              child: NbSurface(
-                intensity: NbIntensity.full,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      branding.asData?.value ?? 'Canteen Coupon System',
-                      style: NbType.heading,
-                    ),
-                    const SizedBox(height: NbSpace.xs),
-                    const Text('Sign in', style: NbType.body),
-                    const SizedBox(height: NbSpace.lg),
-                    NbTextField(
-                      label: 'Username',
-                      controller: _username,
-                      autofocus: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isHost && Platform.isIOS) ...[
+                    const IosHostAdvisory(),
+                    const SizedBox(height: NbSpace.md),
+                  ],
+                  if (firstRunPassword != null) ...[
+                    NbSurface(
+                      intensity: NbIntensity.full,
+                      background: NbColors.warn,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('FIRST-RUN ADMIN PASSWORD',
+                              style: NbType.label
+                                  .copyWith(color: NbColors.onWarn)),
+                          const SizedBox(height: NbSpace.xs),
+                          SelectableText(firstRunPassword,
+                              style: NbType.heading
+                                  .copyWith(color: NbColors.onWarn)),
+                          const SizedBox(height: NbSpace.xs),
+                          Text(
+                            'Username "admin". Shown once, never written to a '
+                            'log. Change it from Users after signing in.',
+                            style: NbType.body.copyWith(color: NbColors.onWarn),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: NbSpace.md),
-                    NbTextField(
-                      label: 'Password',
-                      controller: _password,
-                      obscure: true,
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: NbSpace.md),
-                      Text(_error!,
-                          style: NbType.body.copyWith(color: NbColors.reject)),
-                    ],
-                    const SizedBox(height: NbSpace.lg),
-                    NbButton(
-                      label: 'Sign in',
-                      busy: _busy,
-                      onPressed: _busy ? null : _submit,
-                    ),
                   ],
-                ),
+                  NbSurface(
+                    intensity: NbIntensity.full,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          branding.asData?.value ?? 'Tiffin',
+                          style: NbType.heading,
+                        ),
+                        const SizedBox(height: NbSpace.xs),
+                        const Text('Sign in', style: NbType.body),
+                        const SizedBox(height: NbSpace.lg),
+                        NbTextField(
+                          label: 'Username',
+                          controller: _username,
+                          autofocus: true,
+                        ),
+                        const SizedBox(height: NbSpace.md),
+                        NbTextField(
+                          label: 'Password',
+                          controller: _password,
+                          obscure: true,
+                        ),
+                        if (_error != null) ...[
+                          const SizedBox(height: NbSpace.md),
+                          Text(_error!,
+                              style:
+                                  NbType.body.copyWith(color: NbColors.reject)),
+                        ],
+                        const SizedBox(height: NbSpace.lg),
+                        NbButton(
+                          label: 'Sign in',
+                          busy: _busy,
+                          onPressed: _busy ? null : _submit,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -115,8 +115,8 @@ class DiscoverScreen extends ConsumerWidget {
   }
 }
 
-/// Fallback when mDNS can't cross the network: type the host's IP (shown on its
-/// console under DESKTOP ADMIN) and port.
+/// Fallback when mDNS can't cross the network: type the host's IP (shown on the
+/// host device under Admin ▸ Hosting) and port.
 class _ManualHostDialog extends StatefulWidget {
   const _ManualHostDialog();
 
@@ -126,8 +126,7 @@ class _ManualHostDialog extends StatefulWidget {
 
 class _ManualHostDialogState extends State<_ManualHostDialog> {
   final _ip = TextEditingController();
-  final _port =
-      TextEditingController(text: '${AppConfig.defaultServerPort}');
+  final _port = TextEditingController(text: '${AppConfig.defaultServerPort}');
   String? _error;
 
   @override
@@ -179,8 +178,7 @@ class _ManualHostDialogState extends State<_ManualHostDialog> {
           ),
           if (_error != null) ...[
             const SizedBox(height: NbSpace.sm),
-            Text(_error!,
-                style: NbType.label.copyWith(color: NbColors.reject)),
+            Text(_error!, style: NbType.label.copyWith(color: NbColors.reject)),
           ],
         ],
       ),

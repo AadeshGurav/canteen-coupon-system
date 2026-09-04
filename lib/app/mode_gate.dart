@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_mode.dart';
 import '../core/role.dart';
 import '../ui/admin/admin_dashboard.dart';
+import '../ui/auth/login_screen.dart';
 import '../ui/client/discover_screen.dart';
 import '../ui/counter/counter_home.dart';
-import '../ui/host/host_console_screen.dart';
 import '../ui/scanner/scanner_screen.dart';
 import '../ui/shared_widgets/nb_button.dart';
 import '../ui/shared_widgets/nb_feedback.dart';
@@ -17,8 +17,8 @@ import 'providers.dart';
 /// The single routing decision (kept flat, CLAUDE.md §3):
 ///
 ///  1. no mode chosen        → mode picker
-///  2. host, container ready? → wait / show error
-///  3. not signed in         → host console (host) or discovery (client)
+///  2. host, container ready? → wait / show error (+ auto-start serving)
+///  3. not signed in         → sign-in (host) or host discovery (client)
 ///  4. signed in             → the role's home
 class ModeGate extends ConsumerWidget {
   const ModeGate({super.key});
@@ -38,9 +38,16 @@ class ModeGate extends ConsumerWidget {
         error: (e, _) => Scaffold(
           body: Center(child: ErrorPanel(error: e)),
         ),
-        data: (_) => session == null
-            ? const HostConsoleScreen()
-            : _roleHome(session.role),
+        data: (_) {
+          // A host serves — bring the LAN server up the moment the database is
+          // ready, before anyone signs in, so clients can connect straight
+          // away. Start/stop/certificate controls live in Admin ▸ Hosting.
+          Future.microtask(
+              () => ref.read(hostServingProvider.notifier).ensureStarted());
+          return session == null
+              ? const LoginScreen()
+              : _roleHome(session.role);
+        },
       );
     }
 

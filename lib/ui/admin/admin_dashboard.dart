@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/app_mode.dart';
 import '../scanner/scanner_screen.dart';
 import '../shared_widgets/app_shell.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../theme/tokens.dart';
 import 'expenses_screen.dart';
+import 'hosting_screen.dart';
 import 'ingredients_screen.dart';
 import 'members_screen.dart';
 import 'menu_categories_screen.dart';
@@ -28,6 +30,8 @@ class AdminDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final username = ref.watch(sessionProvider)?.username ?? '';
+    final isHost = ref.watch(currentModeProvider) == AppMode.host;
+    final serving = isHost && ref.watch(hostRunningProvider);
     final destinations = <_Dest>[
       _Dest('Scan', Icons.qr_code_scanner, () => const ScannerScreen()),
       _Dest('Top-up & bill', Icons.payments, () => const TopUpScreen()),
@@ -45,32 +49,68 @@ class AdminDashboard extends ConsumerWidget {
       _Dest('Refunds', Icons.undo, () => const RefundsScreen()),
       _Dest('Settings', Icons.settings, () => const SettingsScreen()),
       _Dest('Users', Icons.admin_panel_settings, () => const UsersScreen()),
+      if (isHost)
+        _Dest(
+            'Hosting & LAN', Icons.wifi_tethering, () => const HostingScreen()),
     ];
+
+    void openHosting() => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HostingScreen()),
+        );
 
     return Scaffold(
       appBar: NbAppBar(title: 'Admin · $username'),
-      body: GridView.count(
-        padding: const EdgeInsets.all(NbSpace.md),
-        crossAxisCount: 2,
-        mainAxisSpacing: NbSpace.md,
-        crossAxisSpacing: NbSpace.md,
-        childAspectRatio: 1.3,
+      body: Column(
         children: [
-          for (final d in destinations)
-            NbSurface(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => d.build()),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(d.icon, size: 36, color: NbColors.ink),
-                  const SizedBox(height: NbSpace.sm),
-                  Text(d.label,
-                      textAlign: TextAlign.center, style: NbType.label),
-                ],
+          if (isHost && !serving)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  NbSpace.md, NbSpace.md, NbSpace.md, 0),
+              child: NbSurface(
+                intensity: NbIntensity.full,
+                background: NbColors.warn,
+                onTap: openHosting,
+                child: Row(
+                  children: [
+                    const Icon(Icons.wifi_off, color: NbColors.onWarn),
+                    const SizedBox(width: NbSpace.sm),
+                    Expanded(
+                      child: Text(
+                        'Not serving on the LAN — other devices can\'t '
+                        'connect. Tap to open Hosting.',
+                        style: NbType.body.copyWith(color: NbColors.onWarn),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+          Expanded(
+            child: GridView.count(
+              padding: const EdgeInsets.all(NbSpace.md),
+              crossAxisCount: 2,
+              mainAxisSpacing: NbSpace.md,
+              crossAxisSpacing: NbSpace.md,
+              childAspectRatio: 1.3,
+              children: [
+                for (final d in destinations)
+                  NbSurface(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => d.build()),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(d.icon, size: 36, color: NbColors.ink),
+                        const SizedBox(height: NbSpace.sm),
+                        Text(d.label,
+                            textAlign: TextAlign.center, style: NbType.label),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
