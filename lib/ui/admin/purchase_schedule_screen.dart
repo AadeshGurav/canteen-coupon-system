@@ -23,6 +23,7 @@ class PurchaseScheduleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final schedule = ref.watch(_scheduleProvider);
     final isAdmin = ref.watch(sessionProvider)?.role == Role.admin;
     final fmt = DateFormat('EEE, MMM d');
@@ -40,8 +41,8 @@ class PurchaseScheduleScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('Add item'),
         onPressed: () => _addManual(context, ref),
@@ -69,7 +70,7 @@ class PurchaseScheduleScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(
                       top: NbSpace.md, bottom: NbSpace.xs),
-                  child: Text(day.key.toUpperCase(), style: NbType.label),
+                  child: Text(day.key.toUpperCase(), style: t.text.label),
                 ),
                 for (final it in day.value)
                   NbSurface(
@@ -95,13 +96,13 @@ class PurchaseScheduleScreen extends ConsumerWidget {
                               Text(
                                   '${it.ingredientName} — ${it.quantityNote} '
                                   '(${it.ingredientUnit})',
-                                  style: NbType.body),
+                                  style: t.text.body),
                               Text(
                                   it.source == 'manual'
                                       ? 'manual'
                                       : 'from menu'
                                           '${it.purchased ? ' · by ${it.purchasedBy}' : ''}',
-                                  style: NbType.label),
+                                  style: t.text.label),
                             ],
                           ),
                         ),
@@ -131,13 +132,14 @@ class PurchaseScheduleScreen extends ConsumerWidget {
   }
 
   Future<void> _generate(BuildContext context, WidgetRef ref) async {
+    final t = context.tokens;
     var start = DateTime.now();
     var end = DateTime.now().add(const Duration(days: 7));
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: const Text('Generate schedule', style: NbType.heading),
+          title: Text('Generate schedule', style: t.text.heading),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -173,6 +175,7 @@ class PurchaseScheduleScreen extends ConsumerWidget {
   }
 
   Future<void> _addManual(BuildContext context, WidgetRef ref) async {
+    final t = context.tokens;
     final ingredients = await ref.read(ingredientsProvider.future);
     if (!context.mounted || ingredients.isEmpty) return;
     var selected = ingredients.first;
@@ -182,7 +185,7 @@ class PurchaseScheduleScreen extends ConsumerWidget {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: const Text('Add purchase item', style: NbType.heading),
+          title: Text('Add purchase item', style: t.text.heading),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -222,12 +225,13 @@ class PurchaseScheduleScreen extends ConsumerWidget {
 
   Widget _dateRow(BuildContext context, String label, DateTime value,
       ValueChanged<DateTime> onChanged) {
+    final t = context.tokens;
     return Row(
       children: [
-        SizedBox(width: 56, child: Text(label, style: NbType.label)),
+        SizedBox(width: 56, child: Text(label, style: t.text.label)),
         Expanded(
             child:
-                Text(DateFormat('MMM d, y').format(value), style: NbType.body)),
+                Text(DateFormat('MMM d, y').format(value), style: t.text.body)),
         TextButton(
           onPressed: () async {
             final picked = await showDatePicker(

@@ -8,6 +8,7 @@ import '../domain/member.dart';
 import '../domain/menu.dart';
 import '../domain/ops.dart';
 import '../domain/settings.dart';
+import '../ui/theme/appearance.dart';
 import '../server/host_container.dart';
 import 'backend.dart';
 
@@ -53,6 +54,10 @@ class HostBackend implements Backend {
 
   @override
   Future<String> branding() => _c.settings.readAppName();
+
+  @override
+  Future<AppearancePolicy> appearancePolicy() async =>
+      AppearancePolicy.fromWire(await _c.settings.readPublicAppearance());
 
   @override
   Future<SettingsSnapshot> getSettings() => _c.settings.read();

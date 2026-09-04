@@ -51,6 +51,10 @@ class SettingsSnapshot {
         appName: j['appName'] as String,
         prepLeadMinutes: (j['prepLeadMinutes'] as num).toInt(),
         purchaseLeadDays: (j['purchaseLeadDays'] as num).toInt(),
+        enforceAppearance: j['enforceAppearance'] as bool? ?? false,
+        appearanceTheme: j['appearanceTheme'] as String? ?? 'neobrutal',
+        appearanceMode: j['appearanceMode'] as String? ?? 'system',
+        appearanceMotion: j['appearanceMotion'] as bool? ?? true,
       );
 
   const SettingsSnapshot({
@@ -65,6 +69,10 @@ class SettingsSnapshot {
     required this.appName,
     required this.prepLeadMinutes,
     required this.purchaseLeadDays,
+    this.enforceAppearance = false,
+    this.appearanceTheme = 'neobrutal',
+    this.appearanceMode = 'system',
+    this.appearanceMotion = true,
   });
 
   final bool graceAllowanceEnabled;
@@ -81,6 +89,15 @@ class SettingsSnapshot {
   final String appName;
   final int prepLeadMinutes;
   final int purchaseLeadDays;
+
+  /// When true, every device on this host renders the appearance below rather
+  /// than its own (CLAUDE.md §11.5). Wire names, not enums, because this
+  /// crosses the HTTP boundary — an unknown value degrades to the default
+  /// theme rather than failing a client's launch.
+  final bool enforceAppearance;
+  final String appearanceTheme;
+  final String appearanceMode;
+  final bool appearanceMotion;
 
   /// Effective grace units for a member, given an optional per-member override
   /// (PRD §5). Null override → the global default when enabled, else 0.
@@ -101,5 +118,19 @@ class SettingsSnapshot {
         'appName': appName,
         'prepLeadMinutes': prepLeadMinutes,
         'purchaseLeadDays': purchaseLeadDays,
+        'enforceAppearance': enforceAppearance,
+        'appearanceTheme': appearanceTheme,
+        'appearanceMode': appearanceMode,
+        'appearanceMotion': appearanceMotion,
+      };
+
+  /// The subset a device needs before anyone signs in, so the theme is right
+  /// on the login screen rather than snapping after authentication.
+  Map<String, dynamic> toAppearanceJson() => {
+        'appName': appName,
+        'enforceAppearance': enforceAppearance,
+        'theme': appearanceTheme,
+        'mode': appearanceMode,
+        'motion': appearanceMotion,
       };
 }

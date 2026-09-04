@@ -18,12 +18,13 @@ class MenuCategoriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final categories = ref.watch(_categoriesProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Menu categories')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('New'),
         onPressed: () => _form(context, ref, null),
@@ -53,9 +54,9 @@ class MenuCategoriesScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(c.name, style: NbType.body),
+                        Text(c.name, style: t.text.body),
                         if (c.description != null)
-                          Text(c.description!, style: NbType.label),
+                          Text(c.description!, style: t.text.label),
                       ],
                     ),
                   ),
@@ -82,13 +83,14 @@ class MenuCategoriesScreen extends ConsumerWidget {
 
   Future<void> _form(
       BuildContext context, WidgetRef ref, MenuCategory? existing) async {
+    final t = context.tokens;
     final name = TextEditingController(text: existing?.name ?? '');
     final desc = TextEditingController(text: existing?.description ?? '');
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(existing == null ? 'New category' : existing.name,
-            style: NbType.heading),
+            style: t.text.heading),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -75,10 +75,11 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen> {
       } catch (_) {/* fall through — show without the QR */}
     }
     if (!mounted) return;
+    final t = context.tokens;
     await showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Bill #${topup.id}', style: NbType.heading),
+        title: Text('Bill #${topup.id}', style: t.text.heading),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,6 +119,7 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final members = ref.watch(_membersProvider);
     final settings = ref.watch(_settingsProvider);
 
@@ -186,13 +188,13 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen> {
               const SizedBox(height: NbSpace.lg),
               NbSurface(
                 intensity: NbIntensity.full,
-                background: NbColors.surfaceMuted,
+                background: t.color.surfaceMuted,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('TOTAL', style: NbType.label),
+                    Text('TOTAL', style: t.text.label),
                     Text('Rs. ${_amount(s).toStringAsFixed(2)}',
-                        style: NbType.heading),
+                        style: t.text.heading),
                   ],
                 ),
               ),
@@ -223,16 +225,17 @@ class _UnitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Padding(
       padding: const EdgeInsets.only(bottom: NbSpace.sm),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: NbType.body)),
+          Expanded(child: Text(label, style: t.text.body)),
           IconButton(
             icon: const Icon(Icons.remove),
             onPressed: value > 0 ? () => onChanged(value - 1) : null,
           ),
-          Text('$value', style: NbType.heading),
+          Text('$value', style: t.text.heading),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => onChanged(value + 1),

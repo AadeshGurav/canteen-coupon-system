@@ -39,6 +39,13 @@ Router publicRoutes(HostContainer c) {
     return jsonOk({'appName': await c.settings.readAppName()});
   });
 
+  // Superset of /settings/branding: adds the host's appearance policy, so a
+  // client renders the enforced theme on the login screen rather than
+  // snapping to it after sign-in. /settings/branding stays for older clients.
+  router.get('/settings/appearance', (Request request) async {
+    return jsonOk(await c.settings.readPublicAppearance());
+  });
+
   return router;
 }
 

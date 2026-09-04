@@ -20,12 +20,13 @@ class RecipesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final recipes = ref.watch(_recipesProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Recipes')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('New'),
         onPressed: () => _form(context, ref, null),
@@ -52,9 +53,9 @@ class RecipesScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(r.dishName, style: NbType.body),
+                  Text(r.dishName, style: t.text.body),
                   Text('${r.ingredients.length} ingredient(s)',
-                      style: NbType.label),
+                      style: t.text.label),
                 ],
               ),
             );
@@ -66,6 +67,7 @@ class RecipesScreen extends ConsumerWidget {
 
   Future<void> _form(
       BuildContext context, WidgetRef ref, Recipe? existing) async {
+    final t = context.tokens;
     final allIngredients = await ref.read(ingredientsProvider.future);
     if (!context.mounted) return;
     final dish = TextEditingController(text: existing?.dishName ?? '');
@@ -88,7 +90,7 @@ class RecipesScreen extends ConsumerWidget {
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
           title: Text(existing == null ? 'New recipe' : existing.dishName,
-              style: NbType.heading),
+              style: t.text.heading),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

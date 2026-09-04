@@ -5,6 +5,7 @@ import '../domain/member.dart';
 import '../domain/menu.dart';
 import '../domain/ops.dart';
 import '../domain/settings.dart';
+import '../ui/theme/appearance.dart';
 import 'backend.dart';
 import 'remote/api_client.dart';
 
@@ -56,6 +57,11 @@ class ClientBackend implements Backend {
   @override
   Future<String> branding() async =>
       _obj(await _api.getJson('/settings/branding'))['appName'] as String;
+
+  @override
+  Future<AppearancePolicy> appearancePolicy() async =>
+      AppearancePolicy.fromWire(
+          _obj(await _api.getJson('/settings/appearance')));
 
   @override
   Future<SettingsSnapshot> getSettings() async =>

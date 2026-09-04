@@ -16,6 +16,7 @@ class CounterHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final username = ref.watch(sessionProvider)?.username ?? '';
     final items = <(String, IconData, Widget Function())>[
       ('Scan', Icons.qr_code_scanner, () => const ScannerScreen()),
@@ -42,9 +43,9 @@ class CounterHome extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(icon, size: 32, color: NbColors.ink),
+                    Icon(icon, size: 32, color: t.color.ink),
                     const SizedBox(width: NbSpace.md),
-                    Text(label, style: NbType.heading),
+                    Text(label, style: t.text.heading),
                   ],
                 ),
               ),

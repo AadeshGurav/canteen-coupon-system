@@ -18,12 +18,13 @@ class IngredientsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final ingredients = ref.watch(ingredientsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Ingredients')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('New'),
         onPressed: () => _form(context, ref, null),
@@ -49,8 +50,8 @@ class IngredientsScreen extends ConsumerWidget {
               onTap: () => _form(context, ref, ing),
               child: Row(
                 children: [
-                  Expanded(child: Text(ing.name, style: NbType.body)),
-                  Text(ing.unit, style: NbType.label),
+                  Expanded(child: Text(ing.name, style: t.text.body)),
+                  Text(ing.unit, style: t.text.label),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () async {
@@ -74,13 +75,14 @@ class IngredientsScreen extends ConsumerWidget {
 
   Future<void> _form(
       BuildContext context, WidgetRef ref, Ingredient? existing) async {
+    final t = context.tokens;
     final name = TextEditingController(text: existing?.name ?? '');
     final unit = TextEditingController(text: existing?.unit ?? '');
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(existing == null ? 'New ingredient' : existing.name,
-            style: NbType.heading),
+            style: t.text.heading),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

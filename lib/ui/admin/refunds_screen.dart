@@ -24,13 +24,14 @@ class RefundsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final refunds = ref.watch(_refundsProvider);
     final fmt = DateFormat('MMM d, y');
     return Scaffold(
       appBar: AppBar(title: const Text('Refunds')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.undo),
         label: const Text('New refund'),
         onPressed: () => _form(context, ref),
@@ -59,11 +60,11 @@ class RefundsScreen extends ConsumerWidget {
                   Text(
                       'L${r.lunchUnits} B${r.breakfastUnits} Br${r.brunchUnits}'
                       '  ·  Rs. ${r.refundAmount.toStringAsFixed(2)}',
-                      style: NbType.body),
+                      style: t.text.body),
                   Text(
                       '${fmt.format(r.createdAt.toLocal())} · by ${r.processedBy}'
                       '${r.reason == null ? '' : ' · ${r.reason}'}',
-                      style: NbType.label),
+                      style: t.text.label),
                 ],
               ),
             );
@@ -74,6 +75,7 @@ class RefundsScreen extends ConsumerWidget {
   }
 
   Future<void> _form(BuildContext context, WidgetRef ref) async {
+    final t = context.tokens;
     final members = await ref.read(_activeMembersProvider.future);
     if (!context.mounted || members.isEmpty) return;
     Member selected = members.first;
@@ -94,7 +96,7 @@ class RefundsScreen extends ConsumerWidget {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: const Text('New refund', style: NbType.heading),
+          title: Text('New refund', style: t.text.heading),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

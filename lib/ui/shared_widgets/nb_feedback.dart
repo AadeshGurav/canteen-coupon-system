@@ -66,18 +66,19 @@ class NbLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 34,
             height: 34,
             child:
-                CircularProgressIndicator(color: NbColors.ink, strokeWidth: 4),
+                CircularProgressIndicator(color: t.color.ink, strokeWidth: 4),
           ),
           const SizedBox(height: NbSpace.md),
-          Text(label ?? 'Loading…', style: NbType.label),
+          Text(label ?? 'Loading…', style: t.text.label),
         ],
       ),
     );
@@ -105,21 +106,22 @@ class NbEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final quip = quips[Random().nextInt(quips.length)];
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(NbSpace.lg),
         child: NbSurface(
           intensity: NbIntensity.full,
-          background: NbColors.surfaceMuted,
+          background: t.color.surfaceMuted,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 48, color: NbColors.ink),
+              Icon(icon, size: 48, color: t.color.ink),
               const SizedBox(height: NbSpace.sm),
-              Text(title, textAlign: TextAlign.center, style: NbType.heading),
+              Text(title, textAlign: TextAlign.center, style: t.text.heading),
               const SizedBox(height: NbSpace.xs),
-              Text(quip, textAlign: TextAlign.center, style: NbType.body),
+              Text(quip, textAlign: TextAlign.center, style: t.text.body),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(height: NbSpace.md),
                 NbButton(label: actionLabel!, onPressed: onAction),
@@ -189,6 +191,7 @@ class ErrorPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final (title, message) = switch (error) {
       HostUnreachableException e => ('HOST UNREACHABLE', e.message),
       AuthException e => ('SESSION PROBLEM', e.message),
@@ -197,7 +200,7 @@ class ErrorPanel extends StatelessWidget {
     };
     final isHostDown = error is HostUnreachableException;
     return NbSurface(
-      background: NbColors.warn,
+      background: t.color.warn,
       intensity: NbIntensity.full,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -205,23 +208,23 @@ class ErrorPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: NbColors.onWarn),
+              Icon(Icons.warning_amber_rounded, color: t.color.onWarn),
               const SizedBox(width: NbSpace.sm),
               Flexible(
                 child: Text(title,
-                    style: NbType.label.copyWith(color: NbColors.onWarn)),
+                    style: t.text.label.copyWith(color: t.color.onWarn)),
               ),
             ],
           ),
           const SizedBox(height: NbSpace.sm),
-          Text(message, style: NbType.body.copyWith(color: NbColors.onWarn)),
+          Text(message, style: t.text.body.copyWith(color: t.color.onWarn)),
           if (onRetry != null) ...[
             const SizedBox(height: NbSpace.md),
             NbButton(
               label: isHostDown ? 'Retry' : 'Try again',
               icon: Icons.refresh,
-              background: NbColors.ink,
-              foreground: NbColors.surface,
+              background: t.color.ink,
+              foreground: t.color.surface,
               onPressed: onRetry,
             ),
           ],
@@ -238,6 +241,7 @@ void showNbSnack(
   bool ok = true,
   Duration duration = const Duration(seconds: 3),
 }) {
+  final t = context.tokens;
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   messenger
@@ -245,21 +249,21 @@ void showNbSnack(
     ..showSnackBar(
       SnackBar(
         duration: duration,
-        backgroundColor: ok ? NbColors.accept : NbColors.reject,
+        backgroundColor: ok ? t.color.accept : t.color.reject,
         behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(
-          side: BorderSide(color: NbColors.ink, width: NbBorders.base),
-          borderRadius: NbBorders.radius,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: t.color.ink, width: t.shape.borderBase),
+          borderRadius: t.shape.radius,
         ),
         content: Row(
           children: [
             Icon(ok ? Icons.check : Icons.close,
-                color: ok ? NbColors.onAccept : NbColors.onReject),
+                color: ok ? t.color.onAccept : t.color.onReject),
             const SizedBox(width: NbSpace.sm),
             Expanded(
               child: Text(message,
-                  style: NbType.body.copyWith(
-                      color: ok ? NbColors.onAccept : NbColors.onReject)),
+                  style: t.text.body.copyWith(
+                      color: ok ? t.color.onAccept : t.color.onReject)),
             ),
           ],
         ),
@@ -278,27 +282,28 @@ Future<bool> runGuarded(
   String? successMessage,
   String workingMessage = 'Working…',
 }) async {
+  final t = context.tokens;
   final messenger = ScaffoldMessenger.maybeOf(context);
   messenger
     ?..clearSnackBars()
     ..showSnackBar(SnackBar(
       duration: const Duration(minutes: 1),
-      backgroundColor: NbColors.ink,
+      backgroundColor: t.color.ink,
       behavior: SnackBarBehavior.floating,
-      shape: const RoundedRectangleBorder(
-        side: BorderSide(color: NbColors.ink, width: NbBorders.base),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: t.color.ink, width: t.shape.borderBase),
       ),
       content: Row(
         children: [
-          const SizedBox(
+          SizedBox(
             width: 16,
             height: 16,
             child: CircularProgressIndicator(
-                strokeWidth: 2.5, color: NbColors.surface),
+                strokeWidth: 2.5, color: t.color.surface),
           ),
           const SizedBox(width: NbSpace.sm),
           Text(workingMessage,
-              style: NbType.body.copyWith(color: NbColors.surface)),
+              style: t.text.body.copyWith(color: t.color.surface)),
         ],
       ),
     ));

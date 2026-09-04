@@ -1,67 +1,108 @@
 import 'package:flutter/material.dart';
 
-/// Neobrutalism design tokens (PRD §14.4) — defined once, consumed everywhere,
-/// never hand-styled per screen. Colours are checked for WCAG AA contrast
-/// against their intended text colour (PRD §14.3); the pairings noted below
-/// are the ones the UI is allowed to use.
+import 'motion.dart';
+import 'palette.dart';
+import 'shape.dart';
+import 'typography.dart';
+
+export 'motion.dart';
+export 'palette.dart';
+export 'shape.dart';
+export 'typography.dart';
+
+/// Every theme-varying design value, carried on [ThemeData] as a
+/// [ThemeExtension] and read through `context.tokens`.
 ///
-/// 60/30/10 (PRD §14.3 / CLAUDE.md §11.4): [surfaceBg] is the 60% ground,
-/// [surface] the 30%, and the accent family the 10% — reserved for the single
-/// most important action on a screen (Von Restorff).
-class NbColors {
-  const NbColors._();
+/// These were compile-time constants until themes became switchable at
+/// runtime. Spacing and intensity stayed constant deliberately (see [NbSpace],
+/// [NbIntensity]) — an 8pt rhythm is not a matter of taste, so keeping it
+/// static avoids threading a token object through code that only wants a gap.
+@immutable
+class TiffinTokens extends ThemeExtension<TiffinTokens> {
+  const TiffinTokens({
+    required this.color,
+    required this.text,
+    required this.shape,
+    required this.motion,
+  });
 
-  // 60% — ground
-  static const surfaceBg = Color(0xFFF5F1E8); // warm off-white
-  static const ink =
-      Color(0xFF1A1A1A); // primary text / borders (AA on all surfaces below)
+  final TiffinPalette color;
+  final TiffinTypography text;
+  final TiffinShape shape;
+  final MotionTokens motion;
 
-  // 30% — surfaces
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceMuted = Color(0xFFE9E4D6);
+  @override
+  TiffinTokens copyWith({
+    TiffinPalette? color,
+    TiffinTypography? text,
+    TiffinShape? shape,
+    MotionTokens? motion,
+  }) =>
+      TiffinTokens(
+        color: color ?? this.color,
+        text: text ?? this.text,
+        shape: shape ?? this.shape,
+        motion: motion ?? this.motion,
+      );
 
-  // 10% — accents. Each is paired with the text colour that clears AA on it.
-  static const accent = Color(0xFF2B6CF6); // primary CTA · text: white
-  static const onAccent = Color(0xFFFFFFFF);
+  /// Colour and type cross-fade on a theme switch; geometry and motion snap at
+  /// the midpoint. Interpolating a border width or a blur radius produces
+  /// visibly wrong in-between states (a half-brutalist card), whereas colour
+  /// interpolation is exactly what makes the switch feel deliberate.
+  @override
+  TiffinTokens lerp(covariant TiffinTokens? other, double t) {
+    if (other == null) return this;
+    final past = t < 0.5;
+    return TiffinTokens(
+      color: _lerpPalette(color, other.color, t),
+      text: past ? text : other.text,
+      shape: past ? shape : other.shape,
+      motion: past ? motion : other.motion,
+    );
+  }
 
-  // Status — never colour alone (PRD §14.3): each pairs with an icon + a
-  // distinct border weight in the widget layer.
-  static const accept = Color(0xFF1E8E4E); // scan accepted · text: white
-  static const onAccept = Color(0xFFFFFFFF);
-  static const reject = Color(0xFFD62D2D); // scan rejected · text: white
-  static const onReject = Color(0xFFFFFFFF);
-  static const warn = Color(0xFFE8A317); // grace / pending · text: ink
-  static const onWarn = ink;
-
-  static const shadow = Color(0xFF1A1A1A); // hard offset shadow
+  static TiffinPalette _lerpPalette(
+      TiffinPalette a, TiffinPalette b, double t) {
+    Color c(Color x, Color y) => Color.lerp(x, y, t)!;
+    return TiffinPalette(
+      brightness: t < 0.5 ? a.brightness : b.brightness,
+      surfaceBg: c(a.surfaceBg, b.surfaceBg),
+      surface: c(a.surface, b.surface),
+      surfaceMuted: c(a.surfaceMuted, b.surfaceMuted),
+      ink: c(a.ink, b.ink),
+      inkMuted: c(a.inkMuted, b.inkMuted),
+      border: c(a.border, b.border),
+      accent: c(a.accent, b.accent),
+      accept: c(a.accept, b.accept),
+      reject: c(a.reject, b.reject),
+      warn: c(a.warn, b.warn),
+      shadow: c(a.shadow, b.shadow),
+      toneMembers: c(a.toneMembers, b.toneMembers),
+      toneMoney: c(a.toneMoney, b.toneMoney),
+      toneKitchen: c(a.toneKitchen, b.toneKitchen),
+      toneSystem: c(a.toneSystem, b.toneSystem),
+      overlayScrim: c(a.overlayScrim, b.overlayScrim),
+    );
+  }
 }
 
-/// Border widths — blocky, but on the 8pt system (PRD §14.3).
-class NbBorders {
-  const NbBorders._();
+/// `context.tokens.color.ink`, `context.tokens.text.body`, and so on.
+extension TiffinTokensContext on BuildContext {
+  TiffinTokens get tokens {
+    final tokens = maybeTokens;
+    assert(tokens != null,
+        'No TiffinTokens on this ThemeData — build it with buildTiffinTheme().');
+    return tokens!;
+  }
 
-  static const double hair = 1.5;
-  static const double base = 3.0; // restrained variant (admin data surfaces)
-  static const double bold = 5.0; // full intensity (scan result, primary CTA)
-
-  static const BorderRadius radius =
-      BorderRadius.zero; // neobrutalism: no rounding
+  /// Null when there is no themed ancestor. Only the crash-screen builder
+  /// should need this: it can be asked to render above [MaterialApp], and a
+  /// last-resort error widget must never fail for want of a theme.
+  TiffinTokens? get maybeTokens => Theme.of(this).extension<TiffinTokens>();
 }
 
-/// Hard, offset drop shadows. Weight scales with intensity (PRD §14.2).
-class NbShadows {
-  const NbShadows._();
-
-  static const List<BoxShadow> restrained = [
-    BoxShadow(color: NbColors.shadow, offset: Offset(3, 3), blurRadius: 0),
-  ];
-
-  static const List<BoxShadow> full = [
-    BoxShadow(color: NbColors.shadow, offset: Offset(6, 6), blurRadius: 0),
-  ];
-}
-
-/// 8-point spacing scale (PRD §14.3 / CLAUDE.md §11.4).
+/// 8-point spacing scale (CLAUDE.md §11.4). Theme-invariant: a theme changes
+/// how things look, never the rhythm they sit on.
 class NbSpace {
   const NbSpace._();
 
@@ -73,41 +114,8 @@ class NbSpace {
   static const double xxl = 48;
 }
 
-/// Small type scale — ~4 sizes, 2 weights (PRD §14.3 / CLAUDE.md §11.4).
-class NbType {
-  const NbType._();
-
-  static const String family =
-      'RobotoMono'; // blocky, monospaced — falls back to system mono
-
-  static const TextStyle display = TextStyle(
-      fontFamily: family,
-      fontSize: 34,
-      fontWeight: FontWeight.w700,
-      color: NbColors.ink,
-      height: 1.1);
-  static const TextStyle heading = TextStyle(
-      fontFamily: family,
-      fontSize: 22,
-      fontWeight: FontWeight.w700,
-      color: NbColors.ink,
-      height: 1.2);
-  static const TextStyle body = TextStyle(
-      fontFamily: family,
-      fontSize: 16,
-      fontWeight: FontWeight.w400,
-      color: NbColors.ink,
-      height: 1.4);
-  static const TextStyle label = TextStyle(
-      fontFamily: family,
-      fontSize: 13,
-      fontWeight: FontWeight.w700,
-      color: NbColors.ink,
-      height: 1.2);
-}
-
-/// The two intensity levels from PRD §14.2, passed to shared widgets so a
-/// screen never re-decides border/shadow weight.
+/// How loudly a surface presents itself. Screens pick an intensity; the theme
+/// decides what that means in border width and shadow.
 enum NbIntensity {
   /// Admin data surfaces — tables, calendar, forms, lists.
   restrained,
@@ -115,9 +123,9 @@ enum NbIntensity {
   /// Scan accept/reject state and primary CTAs.
   full;
 
-  double get borderWidth =>
-      this == NbIntensity.full ? NbBorders.bold : NbBorders.base;
+  double borderWidth(TiffinShape shape) =>
+      this == NbIntensity.full ? shape.borderBold : shape.borderBase;
 
-  List<BoxShadow> get shadow =>
-      this == NbIntensity.full ? NbShadows.full : NbShadows.restrained;
+  List<BoxShadow> shadow(TiffinShape shape) =>
+      this == NbIntensity.full ? shape.shadowFull : shape.shadowRestrained;
 }

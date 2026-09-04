@@ -46,7 +46,17 @@ class SettingsService {
         appName: r.appName,
         prepLeadMinutes: r.prepLeadMinutes,
         purchaseLeadDays: r.purchaseLeadDays,
+        enforceAppearance: r.enforceAppearance,
+        appearanceTheme: r.appearanceTheme,
+        appearanceMode: r.appearanceMode,
+        appearanceMotion: r.appearanceMotion,
       );
+
+  /// What a device needs before anyone has a session: the branding name and,
+  /// if the host enforces one, the appearance to render. Fetching it pre-login
+  /// is what stops the theme snapping the moment someone signs in.
+  Future<Map<String, dynamic>> readPublicAppearance() async =>
+      (await read()).toAppearanceJson();
 
   /// The one field the login screen needs before anyone has a session —
   /// deliberately just this (PRD §6.8, matching v1's `GET /settings/branding`).
@@ -93,6 +103,10 @@ class SettingsService {
       lunchEnd: _windowEnd(patch, 'lunch'),
       brunchStart: _windowStart(patch, 'brunch'),
       brunchEnd: _windowEnd(patch, 'brunch'),
+      enforceAppearance: _val(patch.enforceAppearance),
+      appearanceTheme: _val(patch.appearanceTheme),
+      appearanceMode: _val(patch.appearanceMode),
+      appearanceMotion: _val(patch.appearanceMotion),
     );
 
     if (patch.mealWindows != null) {
@@ -176,6 +190,10 @@ class SettingsPatch {
     this.appName,
     this.prepLeadMinutes,
     this.purchaseLeadDays,
+    this.enforceAppearance,
+    this.appearanceTheme,
+    this.appearanceMode,
+    this.appearanceMotion,
   });
 
   factory SettingsPatch.fromJson(Map<String, dynamic> j) => SettingsPatch(
@@ -195,6 +213,10 @@ class SettingsPatch {
         appName: j['appName'] as String?,
         prepLeadMinutes: (j['prepLeadMinutes'] as num?)?.toInt(),
         purchaseLeadDays: (j['purchaseLeadDays'] as num?)?.toInt(),
+        enforceAppearance: j['enforceAppearance'] as bool?,
+        appearanceTheme: j['appearanceTheme'] as String?,
+        appearanceMode: j['appearanceMode'] as String?,
+        appearanceMotion: j['appearanceMotion'] as bool?,
       );
 
   final bool? graceAllowanceEnabled;
@@ -208,6 +230,10 @@ class SettingsPatch {
   final String? appName;
   final int? prepLeadMinutes;
   final int? purchaseLeadDays;
+  final bool? enforceAppearance;
+  final String? appearanceTheme;
+  final String? appearanceMode;
+  final bool? appearanceMotion;
 
   /// Wire form for the client → host PATCH. Only set fields are included, so
   /// the host's partial-update semantics are preserved.
@@ -227,6 +253,10 @@ class SettingsPatch {
         if (appName != null) 'appName': appName,
         if (prepLeadMinutes != null) 'prepLeadMinutes': prepLeadMinutes,
         if (purchaseLeadDays != null) 'purchaseLeadDays': purchaseLeadDays,
+        if (enforceAppearance != null) 'enforceAppearance': enforceAppearance,
+        if (appearanceTheme != null) 'appearanceTheme': appearanceTheme,
+        if (appearanceMode != null) 'appearanceMode': appearanceMode,
+        if (appearanceMotion != null) 'appearanceMotion': appearanceMotion,
       };
 
   List<String> get changedFields => {
@@ -241,5 +271,9 @@ class SettingsPatch {
         if (appName != null) 'appName',
         if (prepLeadMinutes != null) 'prepLeadMinutes',
         if (purchaseLeadDays != null) 'purchaseLeadDays',
+        if (enforceAppearance != null) 'enforceAppearance',
+        if (appearanceTheme != null) 'appearanceTheme',
+        if (appearanceMode != null) 'appearanceMode',
+        if (appearanceMotion != null) 'appearanceMotion',
       }.toList();
 }

@@ -29,29 +29,42 @@ class AdminDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final username = ref.watch(sessionProvider)?.username ?? '';
     final isHost = ref.watch(currentModeProvider) == AppMode.host;
     final serving = isHost && ref.watch(hostRunningProvider);
+    // Grouped by domain, and coloured by it: fourteen identical boxes are a
+    // wall to scan, four colour families are four places to look. The tone
+    // never carries state, so nothing is lost if it isn't seen (§12.2).
     final destinations = <_Dest>[
-      _Dest('Scan', Icons.qr_code_scanner, () => const ScannerScreen()),
-      _Dest('Top-up & bill', Icons.payments, () => const TopUpScreen()),
-      _Dest('Members', Icons.people, () => const MembersScreen()),
-      _Dest('Scan log', Icons.history, () => const ScanLogScreen()),
-      _Dest('Menu calendar', Icons.calendar_month, () => const MenuScreen()),
-      _Dest('Menu categories', Icons.category,
-          () => const MenuCategoriesScreen()),
-      _Dest('Ingredients', Icons.egg_alt, () => const IngredientsScreen()),
-      _Dest('Recipes', Icons.menu_book, () => const RecipesScreen()),
-      _Dest('Purchase schedule', Icons.shopping_cart,
-          () => const PurchaseScheduleScreen()),
-      _Dest('Expenses & revenue', Icons.receipt_long,
+      _Dest('Scan', Icons.qr_code_scanner, NbTone.members,
+          () => const ScannerScreen()),
+      _Dest(
+          'Members', Icons.people, NbTone.members, () => const MembersScreen()),
+      _Dest('Scan log', Icons.history, NbTone.members,
+          () => const ScanLogScreen()),
+      _Dest('Top-up & bill', Icons.payments, NbTone.money,
+          () => const TopUpScreen()),
+      _Dest('Expenses & revenue', Icons.receipt_long, NbTone.money,
           () => const ExpensesScreen()),
-      _Dest('Refunds', Icons.undo, () => const RefundsScreen()),
-      _Dest('Settings', Icons.settings, () => const SettingsScreen()),
-      _Dest('Users', Icons.admin_panel_settings, () => const UsersScreen()),
+      _Dest('Refunds', Icons.undo, NbTone.money, () => const RefundsScreen()),
+      _Dest('Menu calendar', Icons.calendar_month, NbTone.kitchen,
+          () => const MenuScreen()),
+      _Dest('Menu categories', Icons.category, NbTone.kitchen,
+          () => const MenuCategoriesScreen()),
+      _Dest('Ingredients', Icons.egg_alt, NbTone.kitchen,
+          () => const IngredientsScreen()),
+      _Dest('Recipes', Icons.menu_book, NbTone.kitchen,
+          () => const RecipesScreen()),
+      _Dest('Purchase schedule', Icons.shopping_cart, NbTone.kitchen,
+          () => const PurchaseScheduleScreen()),
+      _Dest('Settings', Icons.settings, NbTone.system,
+          () => const SettingsScreen()),
+      _Dest('Users', Icons.admin_panel_settings, NbTone.system,
+          () => const UsersScreen()),
       if (isHost)
-        _Dest(
-            'Hosting & LAN', Icons.wifi_tethering, () => const HostingScreen()),
+        _Dest('Hosting & LAN', Icons.wifi_tethering, NbTone.system,
+            () => const HostingScreen()),
     ];
 
     void openHosting() => Navigator.of(context).push(
@@ -68,17 +81,17 @@ class AdminDashboard extends ConsumerWidget {
                   NbSpace.md, NbSpace.md, NbSpace.md, 0),
               child: NbSurface(
                 intensity: NbIntensity.full,
-                background: NbColors.warn,
+                background: t.color.warn,
                 onTap: openHosting,
                 child: Row(
                   children: [
-                    const Icon(Icons.wifi_off, color: NbColors.onWarn),
+                    Icon(Icons.wifi_off, color: t.color.onWarn),
                     const SizedBox(width: NbSpace.sm),
                     Expanded(
                       child: Text(
                         'Not serving on the LAN — other devices can\'t '
                         'connect. Tap to open Hosting.',
-                        style: NbType.body.copyWith(color: NbColors.onWarn),
+                        style: t.text.body.copyWith(color: t.color.onWarn),
                       ),
                     ),
                   ],
@@ -95,16 +108,18 @@ class AdminDashboard extends ConsumerWidget {
               children: [
                 for (final d in destinations)
                   NbSurface(
+                    tone: d.tone,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(builder: (_) => d.build()),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(d.icon, size: 36, color: NbColors.ink),
+                        Icon(d.icon,
+                            size: 36, color: t.color.on(t.color.tone(d.tone))),
                         const SizedBox(height: NbSpace.sm),
                         Text(d.label,
-                            textAlign: TextAlign.center, style: NbType.label),
+                            textAlign: TextAlign.center, style: t.text.label),
                       ],
                     ),
                   ),
@@ -118,8 +133,12 @@ class AdminDashboard extends ConsumerWidget {
 }
 
 class _Dest {
-  _Dest(this.label, this.icon, this.build);
+  _Dest(this.label, this.icon, this.tone, this.build);
   final String label;
   final IconData icon;
+
+  /// Which domain this destination belongs to — members, money, kitchen or
+  /// system. Drives the tile colour only.
+  final NbTone tone;
   final Widget Function() build;
 }

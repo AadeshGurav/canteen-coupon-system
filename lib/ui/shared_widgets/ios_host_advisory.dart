@@ -23,19 +23,20 @@ class IosHostAdvisory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return NbSurface(
       intensity: NbIntensity.full,
-      background: NbColors.warn,
+      background: t.color.warn,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('HOSTING ON IPHONE — READ THIS',
-              style: NbType.label.copyWith(color: NbColors.onWarn)),
+              style: t.text.label.copyWith(color: t.color.onWarn)),
           for (final p in _points)
             Padding(
               padding: const EdgeInsets.only(top: NbSpace.xs),
               child: Text('•  $p',
-                  style: NbType.body.copyWith(color: NbColors.onWarn)),
+                  style: t.text.body.copyWith(color: t.color.onWarn)),
             ),
         ],
       ),

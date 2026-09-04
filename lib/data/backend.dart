@@ -5,6 +5,7 @@ import '../domain/member.dart';
 import '../domain/menu.dart';
 import '../domain/ops.dart';
 import '../domain/settings.dart';
+import '../ui/theme/appearance.dart';
 import '../services/settings_service.dart' show SettingsPatch;
 
 export '../services/settings_service.dart' show SettingsPatch;
@@ -27,6 +28,9 @@ abstract interface class Backend {
 
   // ---- settings ---------------------------------------------------
   Future<String> branding();
+
+  /// App name plus the host's appearance policy, readable before sign-in.
+  Future<AppearancePolicy> appearancePolicy();
   Future<SettingsSnapshot> getSettings();
   Future<List<String>> timezones();
   Future<SettingsSnapshot> updateSettings(SettingsPatch patch);

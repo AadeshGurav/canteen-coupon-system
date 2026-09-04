@@ -32,12 +32,13 @@ class NbTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: NbSpace.xs),
-          child: Text(label.toUpperCase(), style: NbType.label),
+          child: Text(label.toUpperCase(), style: t.text.label),
         ),
         TextField(
           controller: controller,
@@ -46,7 +47,7 @@ class NbTextField extends StatelessWidget {
           inputFormatters: formatters,
           onChanged: onChanged,
           autofocus: autofocus,
-          style: NbType.body,
+          style: t.text.body,
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,

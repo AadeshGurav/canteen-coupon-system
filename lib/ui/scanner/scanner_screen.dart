@@ -81,6 +81,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final cameraActions = [
       IconButton(
         icon: const Icon(Icons.flash_on),
@@ -95,7 +96,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     ];
     final username = ref.watch(sessionProvider)?.username ?? '';
     return Scaffold(
-      backgroundColor: NbColors.ink,
+      backgroundColor: t.color.ink,
       // As a role home there is no back button, so use the shared bar that
       // carries sign-out; pushed from admin/counter the parent already has it.
       appBar: widget.isRoleHome
@@ -107,16 +108,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           MobileScanner(controller: _controller, onDetect: _onDetect),
           const _ReticleOverlay(),
           if (_busy)
-            const Center(
-              child: CircularProgressIndicator(color: NbColors.surface),
+            Center(
+              child: CircularProgressIndicator(color: t.color.surface),
             ),
           if (_result != null) _ResultOverlay(result: _result!, onNext: _clear),
           if (_errorMessage != null)
             _MessageOverlay(
               title: 'SCAN ERROR',
               message: _errorMessage!,
-              color: NbColors.warn,
-              onColor: NbColors.onWarn,
+              color: t.color.warn,
+              onColor: t.color.onWarn,
               onNext: _clear,
             ),
         ],
@@ -130,12 +131,13 @@ class _ReticleOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Center(
       child: Container(
         width: 240,
         height: 240,
         decoration: BoxDecoration(
-          border: Border.all(color: NbColors.surface, width: NbBorders.bold),
+          border: Border.all(color: t.color.surface, width: t.shape.borderBold),
         ),
       ),
     );
@@ -150,9 +152,10 @@ class _ResultOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final accepted = result.outcome.isAccepted;
-    final bg = accepted ? NbColors.accept : NbColors.reject;
-    final fg = accepted ? NbColors.onAccept : NbColors.onReject;
+    final bg = accepted ? t.color.accept : t.color.reject;
+    final fg = accepted ? t.color.onAccept : t.color.onReject;
 
     return GestureDetector(
       onTap: onNext,
@@ -170,30 +173,30 @@ class _ResultOverlay extends StatelessWidget {
               Text(
                 accepted ? 'ACCEPTED' : 'REJECTED',
                 textAlign: TextAlign.center,
-                style: NbType.display.copyWith(color: fg, fontSize: 48),
+                style: t.text.display.copyWith(color: fg, fontSize: 48),
               ),
               const SizedBox(height: NbSpace.md),
               if (result.memberName != null)
                 Text(result.memberName!,
                     textAlign: TextAlign.center,
-                    style: NbType.heading.copyWith(color: fg)),
+                    style: t.text.heading.copyWith(color: fg)),
               const SizedBox(height: NbSpace.sm),
               Text(
                 result.message,
                 textAlign: TextAlign.center,
-                style: NbType.body.copyWith(color: fg, fontSize: 18),
+                style: t.text.body.copyWith(color: fg, fontSize: 18),
               ),
               if (result.viaGrace) ...[
                 const SizedBox(height: NbSpace.md),
                 Align(
                   alignment: Alignment.center,
                   child: NbSurface(
-                    background: NbColors.warn,
+                    background: t.color.warn,
                     intensity: NbIntensity.full,
                     padding: const EdgeInsets.symmetric(
                         horizontal: NbSpace.md, vertical: NbSpace.sm),
                     child: Text('ON GRACE ALLOWANCE',
-                        style: NbType.label.copyWith(color: NbColors.onWarn)),
+                        style: t.text.label.copyWith(color: t.color.onWarn)),
                   ),
                 ),
               ],
@@ -230,6 +233,7 @@ class _MessageOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return GestureDetector(
       onTap: onNext,
       child: Container(
@@ -244,11 +248,11 @@ class _MessageOverlay extends StatelessWidget {
               const SizedBox(height: NbSpace.md),
               Text(title,
                   textAlign: TextAlign.center,
-                  style: NbType.display.copyWith(color: onColor, fontSize: 40)),
+                  style: t.text.display.copyWith(color: onColor, fontSize: 40)),
               const SizedBox(height: NbSpace.md),
               Text(message,
                   textAlign: TextAlign.center,
-                  style: NbType.body.copyWith(color: onColor, fontSize: 18)),
+                  style: t.text.body.copyWith(color: onColor, fontSize: 18)),
               const SizedBox(height: NbSpace.xl),
               NbButton(
                 label: 'Try again',

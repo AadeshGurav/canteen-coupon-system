@@ -61,6 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final branding = ref.watch(_brandingProvider);
     final isHost = ref.watch(currentModeProvider) == AppMode.host;
     final firstRunPassword = ref.watch(generatedAdminPasswordProvider);
@@ -86,12 +87,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         Text(
                           branding.asData?.value ?? 'Tiffin',
-                          style: NbType.heading,
+                          style: t.text.heading,
                         ),
-                        if (isHost)
-                          const Text('Host device', style: NbType.label),
+                        if (isHost) Text('Host device', style: t.text.label),
                         const SizedBox(height: NbSpace.xs),
-                        const Text('Sign in', style: NbType.body),
+                        Text('Sign in', style: t.text.body),
                         const SizedBox(height: NbSpace.lg),
                         NbTextField(
                           label: 'Username',
@@ -108,7 +108,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: NbSpace.md),
                           Text(_error!,
                               style:
-                                  NbType.body.copyWith(color: NbColors.reject)),
+                                  t.text.body.copyWith(color: t.color.reject)),
                         ],
                         const SizedBox(height: NbSpace.lg),
                         NbButton(
@@ -123,22 +123,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: NbSpace.md),
                     NbSurface(
                       intensity: NbIntensity.full,
-                      background: NbColors.warn,
+                      background: t.color.warn,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('FIRST-RUN ADMIN PASSWORD',
-                              style: NbType.label
-                                  .copyWith(color: NbColors.onWarn)),
+                              style:
+                                  t.text.label.copyWith(color: t.color.onWarn)),
                           const SizedBox(height: NbSpace.xs),
                           SelectableText(firstRunPassword,
-                              style: NbType.heading
-                                  .copyWith(color: NbColors.onWarn)),
+                              style: t.text.heading
+                                  .copyWith(color: t.color.onWarn)),
                           const SizedBox(height: NbSpace.xs),
                           Text(
                             'Username "admin". Shown once, never written to a '
                             'log. Change it from Users after signing in.',
-                            style: NbType.body.copyWith(color: NbColors.onWarn),
+                            style: t.text.body.copyWith(color: t.color.onWarn),
                           ),
                         ],
                       ),

@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'schema_versions.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
@@ -38,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -46,25 +47,43 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
           await _seedSettingsRow();
         },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
+        // Each step sees the schema as it was at *that* version, never the
+        // latest. Writing them against the current tables looks fine until a
+        // later version adds a column, at which point an old step starts
+        // referencing something that does not exist yet on a real device.
+        // Regenerate the step definitions with `make schema` after a bump.
+        onUpgrade: stepByStep(
+          from1To2: (m, schema) async {
             // A column DEFAULT lives in the CREATE TABLE, so changing it means
-            // recreating the table; TableMigration carries the existing rows
-            // across unchanged.
-            await m.alterTable(TableMigration(appSettings));
-            await _adoptLocalTimezoneDefault();
-          }
-        },
+            // recreating the table; TableMigration carries existing rows over.
+            await m.alterTable(TableMigration(schema.appSettings));
+            // Raw SQL on purpose: it names only columns that exist at v2.
+            //
+            // v1 shipped a `UTC` default, which is wrong for every real
+            // deployment — meal windows are local wall-clock times. Only
+            // installs still on that untouched default are corrected; an admin
+            // who chose UTC deliberately is indistinguishable, but on a
+            // pre-pilot app that trade beats every install silently keeping a
+            // bad zone.
+            await customStatement(
+              "UPDATE app_settings SET local_timezone = 'Asia/Kolkata' "
+              "WHERE local_timezone = 'UTC'",
+            );
+          },
+          from2To3: (m, schema) async {
+            // Host-enforced appearance. Additive and defaulted off, so an
+            // existing host keeps behaving exactly as it did.
+            await m.addColumn(
+                schema.appSettings, schema.appSettings.enforceAppearance);
+            await m.addColumn(
+                schema.appSettings, schema.appSettings.appearanceTheme);
+            await m.addColumn(
+                schema.appSettings, schema.appSettings.appearanceMode);
+            await m.addColumn(
+                schema.appSettings, schema.appSettings.appearanceMotion);
+          },
+        ),
       );
-
-  /// v1 shipped with a `UTC` timezone default, which is wrong for every real
-  /// deployment — meal windows are local wall-clock times. Correct only the
-  /// installs still sitting on that untouched default; an admin who chose UTC
-  /// deliberately is indistinguishable, but on a pre-pilot app that trade is
-  /// worth one wrong guess against every install silently keeping a bad zone.
-  Future<void> _adoptLocalTimezoneDefault() => (update(appSettings)
-        ..where((s) => s.localTimezone.equals('UTC')))
-      .write(const AppSettingsCompanion(localTimezone: Value('Asia/Kolkata')));
 
   Future<void> _seedSettingsRow() => into(appSettings).insert(
         const AppSettingsCompanion(id: Value(0)),

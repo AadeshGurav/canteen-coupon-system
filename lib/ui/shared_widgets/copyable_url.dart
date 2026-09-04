@@ -25,6 +25,7 @@ class CopyableUrl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return InkWell(
       onTap: () async {
         await Clipboard.setData(ClipboardData(text: url));
@@ -40,14 +41,14 @@ class CopyableUrl extends StatelessWidget {
             Flexible(
               child: Text(
                 url,
-                style: NbType.body.copyWith(
+                style: t.text.body.copyWith(
                   fontWeight: FontWeight.w700,
                   decoration: TextDecoration.underline,
                 ),
               ),
             ),
             const SizedBox(width: NbSpace.xs),
-            const Icon(Icons.copy, size: 16, color: NbColors.ink),
+            Icon(Icons.copy, size: 16, color: t.color.ink),
           ],
         ),
       ),

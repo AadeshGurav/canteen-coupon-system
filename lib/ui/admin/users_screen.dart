@@ -19,12 +19,13 @@ class UsersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final users = ref.watch(_usersProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Users')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('New user'),
         onPressed: () => _form(context, ref, null),
@@ -54,9 +55,9 @@ class UsersScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(u.username, style: NbType.body),
+                        Text(u.username, style: t.text.body),
                         Text('${u.role.wire} · ${u.status}',
-                            style: NbType.label),
+                            style: t.text.label),
                       ],
                     ),
                   ),
@@ -82,6 +83,7 @@ class UsersScreen extends ConsumerWidget {
 
   Future<void> _form(
       BuildContext context, WidgetRef ref, AppUser? existing) async {
+    final t = context.tokens;
     final username = TextEditingController(text: existing?.username ?? '');
     final password = TextEditingController();
     var role = existing?.role ?? Role.counter;
@@ -92,7 +94,7 @@ class UsersScreen extends ConsumerWidget {
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
           title: Text(existing == null ? 'New user' : existing.username,
-              style: NbType.heading),
+              style: t.text.heading),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

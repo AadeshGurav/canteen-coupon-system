@@ -300,6 +300,17 @@ class AppSettings extends Table {
   IntColumn get prepLeadMinutes => integer().withDefault(const Constant(60))();
   IntColumn get purchaseLeadDays => integer().withDefault(const Constant(1))();
 
+  /// Appearance policy. Off by default: a device's theme is its own business
+  /// until a site decides it wants one consistent look on every screen.
+  BoolColumn get enforceAppearance =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get appearanceTheme =>
+      text().withDefault(const Constant('neobrutal'))();
+  TextColumn get appearanceMode =>
+      text().withDefault(const Constant('system'))();
+  BoolColumn get appearanceMotion =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

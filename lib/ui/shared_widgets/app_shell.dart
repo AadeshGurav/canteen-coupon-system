@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../domain/ops.dart';
+import '../settings/appearance_screen.dart';
 import '../theme/tokens.dart';
 import 'nb_feedback.dart';
+
+enum _ShellAction { appearance, signOut }
 
 /// App bar shared by every signed-in screen: the branding title, the
 /// notification bell (PRD §6.5.2), and sign-out.
@@ -24,10 +27,39 @@ class NbAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         ...?actions,
         const _NotificationBell(),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          tooltip: 'Sign out',
-          onPressed: () => ref.read(sessionProvider.notifier).logout(),
+        // Appearance and sign-out live in an overflow rather than as two more
+        // icons: the scan screen already carries torch and camera, and four
+        // adjacent icon targets is where mis-taps start (§11.6.5). It also
+        // gives every role a way to reach Appearance — scanner and counter
+        // have no Settings screen of their own.
+        PopupMenuButton<_ShellAction>(
+          icon: const Icon(Icons.more_vert),
+          tooltip: 'More',
+          onSelected: (action) => switch (action) {
+            _ShellAction.appearance => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                    builder: (_) => const AppearanceScreen()),
+              ),
+            _ShellAction.signOut => ref.read(sessionProvider.notifier).logout(),
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: _ShellAction.appearance,
+              child: ListTile(
+                leading: Icon(Icons.palette_outlined),
+                title: Text('Appearance'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            PopupMenuItem(
+              value: _ShellAction.signOut,
+              child: ListTile(
+                leading: Icon(Icons.logout),
+                title: Text('Sign out'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -39,6 +71,7 @@ class _NotificationBell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final notes = ref.watch(notificationsProvider).asData?.value ?? const [];
     return Stack(
       alignment: Alignment.center,
@@ -53,14 +86,14 @@ class _NotificationBell extends ConsumerWidget {
             top: 8,
             child: Container(
               padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: NbColors.reject,
+              decoration: BoxDecoration(
+                color: t.color.reject,
                 border: Border.fromBorderSide(
-                    BorderSide(color: NbColors.ink, width: 1.5)),
+                    BorderSide(color: t.color.ink, width: 1.5)),
               ),
               child: Text('${notes.length}',
-                  style: NbType.label
-                      .copyWith(color: NbColors.onReject, fontSize: 10)),
+                  style: t.text.label
+                      .copyWith(color: t.color.onReject, fontSize: 10)),
             ),
           ),
       ],
@@ -68,11 +101,12 @@ class _NotificationBell extends ConsumerWidget {
   }
 
   void _open(BuildContext context, WidgetRef ref, List<AppNotification> notes) {
+    final t = context.tokens;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: NbColors.surface,
-      shape: const RoundedRectangleBorder(
-        side: BorderSide(color: NbColors.ink, width: NbBorders.bold),
+      backgroundColor: t.color.surface,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: t.color.ink, width: t.shape.borderBold),
       ),
       builder: (_) => SafeArea(
         child: Padding(
@@ -81,21 +115,21 @@ class _NotificationBell extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('NOTIFICATIONS', style: NbType.heading),
+              Text('NOTIFICATIONS', style: t.text.heading),
               const SizedBox(height: NbSpace.md),
               if (notes.isEmpty)
-                const Text('Nothing right now.', style: NbType.body)
+                Text('Nothing right now.', style: t.text.body)
               else
                 ...notes.map(
                   (n) => Padding(
                     padding: const EdgeInsets.only(bottom: NbSpace.sm),
                     child: ListTile(
-                      shape: const RoundedRectangleBorder(
+                      shape: RoundedRectangleBorder(
                         side: BorderSide(
-                            color: NbColors.ink, width: NbBorders.base),
+                            color: t.color.ink, width: t.shape.borderBase),
                       ),
-                      title: Text(n.title, style: NbType.label),
-                      subtitle: Text(n.message, style: NbType.body),
+                      title: Text(n.title, style: t.text.label),
+                      subtitle: Text(n.message, style: t.text.body),
                       trailing: IconButton(
                         icon: const Icon(Icons.close),
                         onPressed: () async {

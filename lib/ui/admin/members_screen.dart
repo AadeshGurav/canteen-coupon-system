@@ -21,12 +21,13 @@ class MembersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final members = ref.watch(_membersProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Members')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('New'),
         onPressed: () => _openForm(context, ref, null),
@@ -72,6 +73,7 @@ class _MemberTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final b = member.balances;
     return NbSurface(
       onTap: () => MembersScreen._openForm(context, ref, member),
@@ -81,14 +83,14 @@ class _MemberTile extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(member.name, style: NbType.heading),
+                child: Text(member.name, style: t.text.heading),
               ),
               if (!member.isActive)
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: NbSpace.sm, vertical: 2),
-                  color: NbColors.surfaceMuted,
-                  child: const Text('INACTIVE', style: NbType.label),
+                  color: t.color.surfaceMuted,
+                  child: Text('INACTIVE', style: t.text.label),
                 ),
             ],
           ),
@@ -96,12 +98,12 @@ class _MemberTile extends ConsumerWidget {
             member.type == 'student'
                 ? 'Student · ${member.className ?? '—'} · roll ${member.rollNumber ?? '—'}'
                 : 'Staff · ${member.staffId ?? '—'}',
-            style: NbType.label,
+            style: t.text.label,
           ),
           const SizedBox(height: NbSpace.sm),
           Text(
               'Lunch ${b.lunch}   Breakfast ${b.breakfast}   Brunch ${b.brunch}',
-              style: NbType.body),
+              style: t.text.body),
           const SizedBox(height: NbSpace.sm),
           Wrap(
             spacing: NbSpace.sm,
@@ -122,13 +124,14 @@ class _MemberTile extends ConsumerWidget {
   }
 
   Future<void> _credit(BuildContext context, WidgetRef ref) async {
+    final t = context.tokens;
     final lunch = TextEditingController(text: '0');
     final breakfast = TextEditingController(text: '0');
     final brunch = TextEditingController(text: '0');
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Credit ${member.name}', style: NbType.heading),
+        title: Text('Credit ${member.name}', style: t.text.heading),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -167,6 +170,7 @@ class _MemberTile extends ConsumerWidget {
   }
 
   Future<void> _showQr(BuildContext context, WidgetRef ref) async {
+    final t = context.tokens;
     Uint8List? png;
     try {
       png = Uint8List.fromList(
@@ -179,7 +183,7 @@ class _MemberTile extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(member.name, style: NbType.heading),
+        title: Text(member.name, style: t.text.heading),
         content: Image.memory(png!, width: 260, height: 260),
         actions: [
           TextButton(
@@ -259,6 +263,7 @@ class _MemberFormState extends ConsumerState<_MemberForm> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? 'Edit member' : 'New member')),
       body: SingleChildScrollView(
@@ -308,8 +313,8 @@ class _MemberFormState extends ConsumerState<_MemberForm> {
               const SizedBox(height: NbSpace.sm),
               NbButton(
                 label: 'Delete',
-                background: NbColors.reject,
-                foreground: NbColors.onReject,
+                background: t.color.reject,
+                foreground: t.color.onReject,
                 onPressed: _delete,
               ),
             ],

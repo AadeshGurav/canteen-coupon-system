@@ -19,6 +19,7 @@ class ScanLogScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final scans = ref.watch(_scansProvider);
     final fmt = DateFormat('MMM d, HH:mm');
 
@@ -48,18 +49,17 @@ class ScanLogScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text('${s.memberName} · ${s.mealType.wire}',
-                            style: NbType.body),
+                            style: t.text.body),
                       ),
                       if (s.reversed)
                         Text('REVERSED',
-                            style:
-                                NbType.label.copyWith(color: NbColors.reject))
+                            style: t.text.label.copyWith(color: t.color.reject))
                       else if (s.viaGrace)
                         Text('GRACE',
-                            style: NbType.label.copyWith(color: NbColors.warn)),
+                            style: t.text.label.copyWith(color: t.color.warn)),
                     ],
                   ),
-                  Text(fmt.format(s.scannedAt.toLocal()), style: NbType.label),
+                  Text(fmt.format(s.scannedAt.toLocal()), style: t.text.label),
                   if (reversible) ...[
                     const SizedBox(height: NbSpace.sm),
                     NbButton.secondary(

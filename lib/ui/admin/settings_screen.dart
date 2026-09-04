@@ -10,6 +10,7 @@ import '../shared_widgets/nb_feedback.dart';
 import '../shared_widgets/nb_picker.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../shared_widgets/nb_text_field.dart';
+import '../settings/appearance_screen.dart';
 import '../theme/tokens.dart';
 import 'hosting_screen.dart';
 
@@ -105,6 +106,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final zones = ref.watch(_timezonesProvider).asData?.value ?? [_timezone];
     final isHost = ref.watch(currentModeProvider) == AppMode.host;
     final serving = isHost && ref.watch(hostRunningProvider);
@@ -119,31 +121,31 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             child: Row(
               children: [
                 Icon(serving ? Icons.wifi_tethering : Icons.wifi_off,
-                    color: serving ? NbColors.accept : NbColors.reject),
+                    color: serving ? t.color.accept : t.color.reject),
                 const SizedBox(width: NbSpace.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('HOSTING & LAN', style: NbType.label),
+                      Text('HOSTING & LAN', style: t.text.label),
                       Text(
                         serving
                             ? 'Serving. Manage URLs, restart, certificate.'
                             : 'Not serving. Tap to start.',
-                        style: NbType.body,
+                        style: t.text.body,
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: NbColors.ink),
+                Icon(Icons.chevron_right, color: t.color.ink),
               ],
             ),
           ),
           const SizedBox(height: NbSpace.sm),
         ],
-        _section('Branding'),
+        _section(t, 'Branding'),
         NbTextField(label: 'App name', controller: _appName),
-        _section('Unit prices (Rs.)'),
+        _section(t, 'Unit prices (Rs.)'),
         NbTextField(
             label: 'Lunch',
             controller: _lunchPrice,
@@ -158,13 +160,13 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             label: 'Brunch',
             controller: _brunchPrice,
             keyboardType: TextInputType.number),
-        _section('Meal windows (HH:MM, 24h)'),
+        _section(t, 'Meal windows (HH:MM, 24h)'),
         for (final m in const ['breakfast', 'lunch', 'brunch'])
           Padding(
             padding: const EdgeInsets.only(bottom: NbSpace.sm),
             child: Row(
               children: [
-                SizedBox(width: 90, child: Text(m, style: NbType.label)),
+                SizedBox(width: 90, child: Text(m, style: t.text.label)),
                 Expanded(
                     child: NbTextField(
                         label: 'start', controller: _windows[m]!.$1)),
@@ -175,16 +177,16 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ],
             ),
           ),
-        _section('Timezone (IANA)'),
+        _section(t, 'Timezone (IANA)'),
         NbPickerField(
           label: 'Timezone',
           value: zones.contains(_timezone) ? _timezone : zones.first,
           options: zones,
           onSelected: (z) => setState(() => _timezone = z),
         ),
-        _section('Grace allowance'),
+        _section(t, 'Grace allowance'),
         SwitchListTile(
-          title: const Text('Enabled', style: NbType.body),
+          title: Text('Enabled', style: t.text.body),
           value: _graceEnabled,
           onChanged: (v) => setState(() => _graceEnabled = v),
         ),
@@ -192,7 +194,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             label: 'Default grace units',
             controller: _graceUnits,
             keyboardType: TextInputType.number),
-        _section('Windows & reminders'),
+        _section(t, 'Windows & reminders'),
         NbTextField(
             label: 'Scan reversal window (minutes)',
             controller: _reversal,
@@ -207,7 +209,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             label: 'Purchase reminder lead (days)',
             controller: _purchaseLead,
             keyboardType: TextInputType.number),
-        _section('UPI'),
+        _section(t, 'UPI'),
         NbTextField(label: 'UPI ID (blank = cash only)', controller: _upiId),
         const SizedBox(height: NbSpace.sm),
         NbTextField(label: 'Payee name', controller: _upiPayee),
@@ -216,20 +218,29 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             label: 'Save settings',
             busy: _busy,
             onPressed: _busy ? null : _save),
-        _section('Device'),
+        _section(t, 'Device'),
         NbSurface(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('This device is running as ${isHost ? 'HOST' : 'CLIENT'}.',
-                  style: NbType.body),
+                  style: t.text.body),
               const SizedBox(height: NbSpace.xs),
-              const Text(
+              Text(
                 'Switching role signs you out and returns to setup. Nothing is '
                 'deleted — the host database stays on this device.',
-                style: NbType.body,
+                style: t.text.body,
               ),
               const SizedBox(height: NbSpace.md),
+              NbButton.secondary(
+                label: 'Appearance',
+                icon: Icons.palette_outlined,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                      builder: (_) => const AppearanceScreen()),
+                ),
+              ),
+              const SizedBox(height: NbSpace.sm),
               NbButton.secondary(
                 label: 'Switch device role',
                 icon: Icons.swap_horiz,
@@ -242,25 +253,25 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           const SizedBox(height: NbSpace.md),
           NbSurface(
             intensity: NbIntensity.full,
-            background: NbColors.reject,
+            background: t.color.reject,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('RESET ALL DATA',
-                    style: NbType.label.copyWith(color: NbColors.onReject)),
+                    style: t.text.label.copyWith(color: t.color.onReject)),
                 const SizedBox(height: NbSpace.xs),
                 Text(
                   'Permanently deletes every member, top-up, scan, bill, menu '
                   'entry and user on this host. There is no undo and no backup. '
                   'The device returns to first-run setup.',
-                  style: NbType.body.copyWith(color: NbColors.onReject),
+                  style: t.text.body.copyWith(color: t.color.onReject),
                 ),
                 const SizedBox(height: NbSpace.md),
                 NbButton(
                   label: 'Reset all data',
                   icon: Icons.delete_forever,
-                  background: NbColors.surface,
-                  foreground: NbColors.reject,
+                  background: t.color.surface,
+                  foreground: t.color.reject,
                   onPressed: () => _confirmReset(context, ref),
                 ),
               ],
@@ -307,9 +318,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     }
   }
 
-  Widget _section(String label) => Padding(
+  Widget _section(TiffinTokens t, String label) => Padding(
         padding: const EdgeInsets.only(top: NbSpace.lg, bottom: NbSpace.sm),
-        child: Text(label.toUpperCase(), style: NbType.heading),
+        child: Text(label.toUpperCase(), style: t.text.heading),
       );
 }
 

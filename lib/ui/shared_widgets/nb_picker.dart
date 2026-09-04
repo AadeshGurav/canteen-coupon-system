@@ -26,6 +26,7 @@ class NbPickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return NbSurfaceField(
       label: label,
       onTap: () async {
@@ -42,11 +43,11 @@ class NbPickerField extends StatelessWidget {
           Expanded(
             child: Text(
               value?.isNotEmpty == true ? value! : emptyHint,
-              style: NbType.body,
+              style: t.text.body,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Icon(Icons.search, size: 20, color: NbColors.ink),
+          Icon(Icons.search, size: 20, color: t.color.ink),
         ],
       ),
     );
@@ -69,10 +70,11 @@ class NbSurfaceField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: NbType.label),
+        Text(label, style: t.text.label),
         const SizedBox(height: NbSpace.xs),
         InkWell(
           onTap: onTap,
@@ -82,8 +84,8 @@ class NbSurfaceField extends StatelessWidget {
                 horizontal: NbSpace.md, vertical: NbSpace.md),
             constraints: const BoxConstraints(minHeight: 48), // §11.6.5
             decoration: BoxDecoration(
-              color: NbColors.surface,
-              border: Border.all(color: NbColors.ink, width: NbBorders.base),
+              color: t.color.surface,
+              border: Border.all(color: t.color.ink, width: t.shape.borderBase),
             ),
             child: child,
           ),
@@ -102,12 +104,14 @@ Future<String?> showNbSearchPicker({
   required List<String> options,
   String? selected,
 }) {
+  final t = context.tokens;
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: NbColors.surface,
-    shape: const RoundedRectangleBorder(
-      side: BorderSide(color: NbColors.ink, width: NbBorders.bold),
+    backgroundColor: t.color.surface,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: t.shape.radius.topLeft),
+      side: BorderSide(color: t.color.border, width: t.shape.borderBold),
     ),
     builder: (_) =>
         _SearchPickerSheet(title: title, options: options, selected: selected),
@@ -161,6 +165,7 @@ class _SearchPickerSheetState extends State<_SearchPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     // Leave room for the keyboard: the sheet shrinks instead of hiding the list.
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
@@ -175,7 +180,7 @@ class _SearchPickerSheetState extends State<_SearchPickerSheet> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(widget.title, style: NbType.heading)),
+                    Expanded(child: Text(widget.title, style: t.text.heading)),
                     IconButton(
                       icon: const Icon(Icons.close),
                       tooltip: 'Cancel',
@@ -194,7 +199,7 @@ class _SearchPickerSheetState extends State<_SearchPickerSheet> {
                   Expanded(
                     child: Center(
                       child: Text('Nothing matches "${_query.text}".',
-                          style: NbType.body),
+                          style: t.text.body),
                     ),
                   )
                 else
@@ -210,9 +215,9 @@ class _SearchPickerSheetState extends State<_SearchPickerSheet> {
                         return ListTile(
                           dense: true,
                           selected: isSelected,
-                          title: Text(option, style: NbType.body),
+                          title: Text(option, style: t.text.body),
                           trailing: isSelected
-                              ? const Icon(Icons.check, color: NbColors.accent)
+                              ? Icon(Icons.check, color: t.color.accent)
                               : null,
                           onTap: () => Navigator.of(context).pop(option),
                         );

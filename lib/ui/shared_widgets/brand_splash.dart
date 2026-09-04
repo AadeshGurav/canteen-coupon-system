@@ -12,8 +12,9 @@ class BrandSplash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Scaffold(
-      backgroundColor: NbColors.surfaceBg,
+      backgroundColor: t.color.surfaceBg,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -25,20 +26,20 @@ class BrandSplash extends StatelessWidget {
               filterQuality: FilterQuality.medium,
             ),
             const SizedBox(height: NbSpace.md),
-            Text('TIFFIN', style: NbType.display.copyWith(letterSpacing: 2)),
+            Text('TIFFIN', style: t.text.display.copyWith(letterSpacing: 2)),
             if (message != null) ...[
               const SizedBox(height: NbSpace.lg),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.5, color: NbColors.ink),
+                        strokeWidth: 2.5, color: t.color.ink),
                   ),
                   const SizedBox(width: NbSpace.sm),
-                  Text(message!, style: NbType.body),
+                  Text(message!, style: t.text.body),
                 ],
               ),
             ],

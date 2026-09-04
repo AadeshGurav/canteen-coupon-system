@@ -22,6 +22,7 @@ class HostingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final serving = ref.watch(hostServingProvider);
     final ctrl = ref.read(hostServingProvider.notifier);
     final running = serving.running;
@@ -45,10 +46,10 @@ class HostingScreen extends ConsumerWidget {
                 Row(
                   children: [
                     Icon(running ? Icons.check_circle : Icons.circle_outlined,
-                        color: running ? NbColors.accept : NbColors.ink),
+                        color: running ? t.color.accept : t.color.ink),
                     const SizedBox(width: NbSpace.sm),
                     Text(running ? 'SERVING ON LAN' : 'NOT SERVING',
-                        style: NbType.heading),
+                        style: t.text.heading),
                   ],
                 ),
                 if (running && server != null) ...[
@@ -56,7 +57,7 @@ class HostingScreen extends ConsumerWidget {
                   Text(
                     'Client phones connect on port ${server.httpPort}'
                     '${server.httpsPort != null ? ' · desktop HTTPS on ${server.httpsPort}' : ''}',
-                    style: NbType.body,
+                    style: t.text.body,
                   ),
                 ],
                 if (!serving.discoveryOk) ...[
@@ -65,13 +66,13 @@ class HostingScreen extends ConsumerWidget {
                     'Auto-discovery is off (no Wi-Fi router reachable). Clients '
                     'can still connect with "Connect by IP address" using the '
                     'address below.',
-                    style: NbType.body.copyWith(color: NbColors.reject),
+                    style: t.text.body.copyWith(color: t.color.reject),
                   ),
                 ],
                 if (serving.lastError != null) ...[
                   const SizedBox(height: NbSpace.sm),
                   Text(serving.lastError!,
-                      style: NbType.body.copyWith(color: NbColors.reject)),
+                      style: t.text.body.copyWith(color: t.color.reject)),
                 ],
                 const SizedBox(height: NbSpace.md),
                 if (!running)
@@ -88,8 +89,8 @@ class HostingScreen extends ConsumerWidget {
                         child: NbButton(
                           label: 'Stop',
                           icon: Icons.stop,
-                          background: NbColors.reject,
-                          foreground: NbColors.onReject,
+                          background: t.color.reject,
+                          foreground: t.color.onReject,
                           busy: serving.busy,
                           onPressed: serving.busy ? null : ctrl.stop,
                         ),
@@ -117,23 +118,23 @@ class HostingScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('DESKTOP ADMIN', style: NbType.label),
+                        Text('DESKTOP ADMIN', style: t.text.label),
                         const SizedBox(height: NbSpace.xs),
                         if (urls.http.isEmpty)
-                          const Text('No LAN address — check Wi-Fi.',
-                              style: NbType.body)
+                          Text('No LAN address — check Wi-Fi.',
+                              style: t.text.body)
                         else ...[
-                          const Text(
+                          Text(
                               'Open in a browser on the same Wi-Fi '
                               '(tap to copy):',
-                              style: NbType.body),
+                              style: t.text.body),
                           for (final u in urls.http) CopyableUrl(url: u),
                           if (urls.https.isNotEmpty) ...[
                             const SizedBox(height: NbSpace.xs),
-                            const Text(
+                            Text(
                                 'Encrypted (one "not trusted" warning per '
                                 'computer):',
-                                style: NbType.label),
+                                style: t.text.label),
                             for (final u in urls.https) CopyableUrl(url: u),
                           ],
                         ],
@@ -155,7 +156,7 @@ class HostingScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('KEEP THIS DEVICE AWAKE', style: NbType.label),
+                Text('KEEP THIS DEVICE AWAKE', style: t.text.label),
                 const SizedBox(height: NbSpace.xs),
                 Text(
                   Platform.isIOS
@@ -165,7 +166,7 @@ class HostingScreen extends ConsumerWidget {
                       : 'While serving, the screen is held awake and a '
                           'foreground service keeps the server running. Keep the '
                           'phone on power and on Wi-Fi; don\'t force-stop the app.',
-                  style: NbType.body,
+                  style: t.text.body,
                 ),
               ],
             ),
@@ -177,19 +178,19 @@ class HostingScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('DESKTOP-ADMIN TLS (OPTIONAL)', style: NbType.label),
+                Text('DESKTOP-ADMIN TLS (OPTIONAL)', style: t.text.label),
                 const SizedBox(height: NbSpace.xs),
-                const Text(
+                Text(
                   'Encrypts admin login over the LAN. A self-signed certificate '
                   'still shows a browser "not trusted" warning the first time '
                   'each computer connects. It never affects phone-to-phone use. '
                   'Restart serving after generating.',
-                  style: NbType.body,
+                  style: t.text.body,
                 ),
                 if (serving.certExpiry != null) ...[
                   const SizedBox(height: NbSpace.xs),
                   Text('Current certificate valid until ${serving.certExpiry}',
-                      style: NbType.body),
+                      style: t.text.body),
                 ],
                 const SizedBox(height: NbSpace.md),
                 NbButton.secondary(
@@ -214,6 +215,7 @@ class _HotspotCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final hs = ref.watch(hotspotProvider);
     final ctrl = ref.read(hotspotProvider.notifier);
     final info = hs.info;
@@ -222,19 +224,19 @@ class _HotspotCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('SERVE WITHOUT WI-FI (HOTSPOT)', style: NbType.label),
+          Text('SERVE WITHOUT WI-FI (HOTSPOT)', style: t.text.label),
           const SizedBox(height: NbSpace.xs),
           if (info == null) ...[
-            const Text(
+            Text(
               'No Wi-Fi at the canteen? This phone makes its own private '
               'network. It turns Wi-Fi off on this device while active, and '
               'has no internet — just the canteen app.',
-              style: NbType.body,
+              style: t.text.body,
             ),
             if (hs.error != null) ...[
               const SizedBox(height: NbSpace.xs),
               Text(hs.error!,
-                  style: NbType.body.copyWith(color: NbColors.reject)),
+                  style: t.text.body.copyWith(color: t.color.reject)),
             ],
             const SizedBox(height: NbSpace.md),
             NbButton.secondary(
@@ -253,19 +255,19 @@ class _HotspotCard extends ConsumerWidget {
             _kv(context, 'Password', info.passphrase),
             _kv(context, 'Host address', '${info.host}:8710'),
             const SizedBox(height: NbSpace.sm),
-            const Text(
+            Text(
                 'Other phones: scan to join, then open the app and '
                 'pick this host (or Connect by IP → ${'192.168.49.1'}).',
-                style: NbType.body),
+                style: t.text.body),
             const SizedBox(height: NbSpace.sm),
             Center(
               child: Container(
                 padding: const EdgeInsets.all(NbSpace.sm),
-                color: NbColors.surface,
+                color: t.color.surface,
                 child: QrImageView(
                   data: info.joinQr,
                   size: 180,
-                  backgroundColor: NbColors.surface,
+                  backgroundColor: t.color.surface,
                 ),
               ),
             ),
@@ -273,8 +275,8 @@ class _HotspotCard extends ConsumerWidget {
             NbButton(
               label: 'Stop hotspot',
               icon: Icons.stop,
-              background: NbColors.reject,
-              foreground: NbColors.onReject,
+              background: t.color.reject,
+              foreground: t.color.onReject,
               busy: hs.busy,
               onPressed: hs.busy ? null : ctrl.stop,
             ),
@@ -284,11 +286,13 @@ class _HotspotCard extends ConsumerWidget {
     );
   }
 
-  Widget _kv(BuildContext context, String k, String v) => Padding(
+  Widget _kv(BuildContext context, String k, String v) {
+    final t = context.tokens;
+    return Padding(
         padding: const EdgeInsets.symmetric(vertical: NbSpace.xs),
         child: Row(
           children: [
-            SizedBox(width: 120, child: Text(k, style: NbType.label)),
+            SizedBox(width: 120, child: Text(k, style: t.text.label)),
             Expanded(
               child: InkWell(
                 onTap: () async {
@@ -296,10 +300,10 @@ class _HotspotCard extends ConsumerWidget {
                   if (context.mounted) showNbSnack(context, 'Copied "$v".');
                 },
                 child: Text(v,
-                    style: NbType.body.copyWith(fontWeight: FontWeight.w700)),
+                    style: t.text.body.copyWith(fontWeight: FontWeight.w700)),
               ),
             ),
           ],
-        ),
-      );
+        ));
+  }
 }

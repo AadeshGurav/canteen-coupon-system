@@ -40,6 +40,7 @@ class MenuScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final month = ref.watch(_monthProvider);
     final selected = ref.watch(_selectedDayProvider);
     final entries = ref.watch(_menuProvider);
@@ -57,7 +58,7 @@ class MenuScreen extends ConsumerWidget {
                 onPressed: () => ref.read(_monthProvider.notifier).state =
                     DateTime(month.year, month.month - 1),
               ),
-              Text(DateFormat('MMMM y').format(month), style: NbType.label),
+              Text(DateFormat('MMMM y').format(month), style: t.text.label),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () => ref.read(_monthProvider.notifier).state =
@@ -68,8 +69,8 @@ class MenuScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: Text('Add · ${DateFormat('MMM d').format(selected)}'),
         onPressed: () => _addEntry(context, ref, selected),
@@ -130,6 +131,7 @@ class MenuScreen extends ConsumerWidget {
 
   Future<void> _addEntry(
       BuildContext context, WidgetRef ref, DateTime day) async {
+    final t = context.tokens;
     final categories = await ref.read(_categoriesProvider.future);
     if (!context.mounted) return;
     var date = day;
@@ -142,7 +144,7 @@ class MenuScreen extends ConsumerWidget {
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
           title: Text('Add · ${DateFormat('EEE, MMM d').format(date)}',
-              style: NbType.heading),
+              style: t.text.heading),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -157,12 +159,12 @@ class MenuScreen extends ConsumerWidget {
                   onChanged: (m) => setLocal(() => meal = m ?? meal),
                 ),
                 if (categories.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: NbSpace.sm),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: NbSpace.sm),
                     child: Text(
                         'No categories yet — add some on the Menu categories '
                         'page first.',
-                        style: NbType.label),
+                        style: t.text.label),
                   )
                 else
                   Wrap(
@@ -215,11 +217,12 @@ class MenuScreen extends ConsumerWidget {
 }
 
 /// A colour + a letter per meal — never colour alone (PRD §14.3).
-const _mealColor = {
-  MealType.breakfast: NbColors.warn,
-  MealType.lunch: NbColors.accent,
-  MealType.brunch: NbColors.accept,
-};
+/// Resolved from the palette rather than a const map, so it follows the theme.
+Color _mealColor(TiffinPalette c, MealType meal) => switch (meal) {
+      MealType.breakfast => c.warn,
+      MealType.lunch => c.accent,
+      MealType.brunch => c.accept,
+    };
 
 class _MonthGrid extends StatelessWidget {
   const _MonthGrid({
@@ -238,6 +241,7 @@ class _MonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final firstOfMonth = DateTime(month.year, month.month, 1);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     // Monday-first grid. weekday: Mon=1..Sun=7.
@@ -255,7 +259,7 @@ class _MonthGrid extends StatelessWidget {
               for (final d in const ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
                 Expanded(
                   child: Center(
-                    child: Text(d, style: NbType.label),
+                    child: Text(d, style: t.text.label),
                   ),
                 ),
             ],
@@ -266,7 +270,7 @@ class _MonthGrid extends StatelessWidget {
               children: [
                 for (var c = 0; c < 7; c++)
                   Expanded(
-                    child: _cell(r * 7 + c - leadingBlanks + 1, today),
+                    child: _cell(t, r * 7 + c - leadingBlanks + 1, today),
                   ),
               ],
             ),
@@ -275,7 +279,7 @@ class _MonthGrid extends StatelessWidget {
     );
   }
 
-  Widget _cell(int day, DateTime today) {
+  Widget _cell(TiffinTokens t, int day, DateTime today) {
     if (day < 1 || day > DateTime(month.year, month.month + 1, 0).day) {
       return const AspectRatio(aspectRatio: 1, child: SizedBox.shrink());
     }
@@ -293,20 +297,22 @@ class _MonthGrid extends StatelessWidget {
           onTap: () => onSelect(date),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? NbColors.ink : NbColors.surface,
+              color: isSelected ? t.color.ink : t.color.surface,
               border: Border.all(
-                color: isToday ? NbColors.accent : NbColors.ink,
-                width: isSelected || isToday ? NbBorders.bold : NbBorders.hair,
+                color: isToday ? t.color.accent : t.color.ink,
+                width: isSelected || isToday
+                    ? t.shape.borderBold
+                    : t.shape.borderHair,
               ),
-              boxShadow: isSelected ? NbShadows.restrained : null,
+              boxShadow: isSelected ? t.shape.shadowRestrained : null,
             ),
             padding: const EdgeInsets.all(3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('$day',
-                    style: NbType.label.copyWith(
-                        color: isSelected ? NbColors.surface : NbColors.ink)),
+                    style: t.text.label.copyWith(
+                        color: isSelected ? t.color.surface : t.color.ink)),
                 const Spacer(),
                 if (count > 0)
                   Row(
@@ -317,15 +323,14 @@ class _MonthGrid extends StatelessWidget {
                             width: 6,
                             height: 6,
                             margin: const EdgeInsets.only(right: 2),
-                            color: _mealColor[m],
+                            color: _mealColor(t.color, m),
                           ),
                       const Spacer(),
                       Text('$count',
-                          style: NbType.label.copyWith(
+                          style: t.text.label.copyWith(
                               fontSize: 10,
-                              color: isSelected
-                                  ? NbColors.surface
-                                  : NbColors.ink)),
+                              color:
+                                  isSelected ? t.color.surface : t.color.ink)),
                     ],
                   ),
               ],
@@ -352,22 +357,23 @@ class _DayPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return ListView(
       padding: const EdgeInsets.all(NbSpace.md),
       children: [
         Text(DateFormat('EEEE, MMMM d').format(day).toUpperCase(),
-            style: NbType.heading),
+            style: t.text.heading),
         const SizedBox(height: NbSpace.sm),
         if (entries.isEmpty)
-          const NbSurface(
-            background: NbColors.surfaceMuted,
+          NbSurface(
+            background: t.color.surfaceMuted,
             child: Row(
               children: [
-                Icon(Icons.restaurant_menu, color: NbColors.ink),
-                SizedBox(width: NbSpace.sm),
+                Icon(Icons.restaurant_menu, color: t.color.ink),
+                const SizedBox(width: NbSpace.sm),
                 Expanded(
                   child:
-                      Text('Nothing planned for this day.', style: NbType.body),
+                      Text('Nothing planned for this day.', style: t.text.body),
                 ),
               ],
             ),
@@ -382,7 +388,7 @@ class _DayPanel extends StatelessWidget {
                     Container(
                       width: 10,
                       height: 40,
-                      color: _mealColor[e.mealType],
+                      color: _mealColor(t.color, e.mealType),
                     ),
                     const SizedBox(width: NbSpace.sm),
                     Expanded(
@@ -392,8 +398,8 @@ class _DayPanel extends StatelessWidget {
                           Text(
                               '${e.mealType.wire.toUpperCase()} · '
                               '${e.categories.join(", ")}',
-                              style: NbType.label),
-                          Text(e.items.join(', '), style: NbType.body),
+                              style: t.text.label),
+                          Text(e.items.join(', '), style: t.text.body),
                         ],
                       ),
                     ),

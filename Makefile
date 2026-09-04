@@ -22,6 +22,7 @@ watch:
 schema:
 	dart run drift_dev schema dump lib/data/local/database.dart drift_schemas/
 	dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
+	dart run drift_dev schema steps drift_schemas/ lib/data/local/schema_versions.dart
 
 # Run on a connected Android device / emulator.
 run:

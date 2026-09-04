@@ -21,6 +21,7 @@ class ExpensesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final expenses = ref.watch(_expensesProvider);
     final summary = ref.watch(_summaryProvider);
     final fmt = DateFormat('MMM d');
@@ -28,8 +29,8 @@ class ExpensesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Expenses & revenue')),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: NbColors.accent,
-        foregroundColor: NbColors.onAccent,
+        backgroundColor: t.color.accent,
+        foregroundColor: t.color.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('Log expense'),
         onPressed: () => _form(context, ref),
@@ -39,13 +40,13 @@ class ExpensesScreen extends ConsumerWidget {
           summary.maybeWhen(
             data: (s) => NbSurface(
               intensity: NbIntensity.full,
-              background: NbColors.surfaceMuted,
+              background: t.color.surfaceMuted,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _stat('Revenue', s.revenue),
-                  _stat('Expenses', s.expenses),
-                  _stat('Profit', s.profit),
+                  _stat(t, 'Revenue', s.revenue),
+                  _stat(t, 'Expenses', s.expenses),
+                  _stat(t, 'Profit', s.profit),
                 ],
               ),
             ),
@@ -77,13 +78,13 @@ class ExpensesScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('${e.category} · ${e.description}',
-                                  style: NbType.body),
-                              Text(fmt.format(e.date), style: NbType.label),
+                                  style: t.text.body),
+                              Text(fmt.format(e.date), style: t.text.label),
                             ],
                           ),
                         ),
                         Text('Rs. ${e.amount.toStringAsFixed(2)}',
-                            style: NbType.body),
+                            style: t.text.body),
                       ],
                     ),
                   );
@@ -96,14 +97,15 @@ class ExpensesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _stat(String label, double value) => Column(
+  Widget _stat(TiffinTokens t, String label, double value) => Column(
         children: [
-          Text(label.toUpperCase(), style: NbType.label),
-          Text('Rs. ${value.toStringAsFixed(0)}', style: NbType.heading),
+          Text(label.toUpperCase(), style: t.text.label),
+          Text('Rs. ${value.toStringAsFixed(0)}', style: t.text.heading),
         ],
       );
 
   Future<void> _form(BuildContext context, WidgetRef ref) async {
+    final t = context.tokens;
     final category = TextEditingController();
     final description = TextEditingController();
     final amount = TextEditingController();
@@ -112,7 +114,7 @@ class ExpensesScreen extends ConsumerWidget {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: const Text('Log expense', style: NbType.heading),
+          title: Text('Log expense', style: t.text.heading),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -132,7 +134,7 @@ class ExpensesScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                         child: Text(DateFormat('MMM d, y').format(date),
-                            style: NbType.body)),
+                            style: t.text.body)),
                     TextButton(
                       onPressed: () async {
                         final picked = await showDatePicker(

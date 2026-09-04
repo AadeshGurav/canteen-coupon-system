@@ -37,6 +37,7 @@ class DiscoverScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final hosts = ref.watch(discoveredHostsProvider);
     final lastHost = ref.read(lastHostStoreProvider).read();
 
@@ -58,7 +59,7 @@ class DiscoverScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Canteen devices on this Wi-Fi', style: NbType.heading),
+            Text('Canteen devices on this Wi-Fi', style: t.text.heading),
             const SizedBox(height: NbSpace.md),
             if (lastHost != null) ...[
               NbButton(
@@ -86,15 +87,15 @@ class DiscoverScreen extends ConsumerWidget {
                         onTap: () => _connect(context, ref, host),
                         child: Row(
                           children: [
-                            const Icon(Icons.dns, color: NbColors.ink),
+                            Icon(Icons.dns, color: t.color.ink),
                             const SizedBox(width: NbSpace.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(host.name, style: NbType.body),
+                                  Text(host.name, style: t.text.body),
                                   Text('${host.host}:${host.port}',
-                                      style: NbType.label),
+                                      style: t.text.label),
                                 ],
                               ),
                             ),
@@ -172,6 +173,7 @@ class _ManualHostDialogState extends State<_ManualHostDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return AlertDialog(
       title: const Text('Connect by IP'),
       content: Column(
@@ -200,7 +202,7 @@ class _ManualHostDialogState extends State<_ManualHostDialog> {
           ),
           if (_error != null) ...[
             const SizedBox(height: NbSpace.sm),
-            Text(_error!, style: NbType.label.copyWith(color: NbColors.reject)),
+            Text(_error!, style: t.text.label.copyWith(color: t.color.reject)),
           ],
         ],
       ),
@@ -220,19 +222,20 @@ class _Searching extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final t = context.tokens;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: NbColors.ink),
-          SizedBox(height: NbSpace.md),
-          Text('Looking for a host…', style: NbType.body),
-          SizedBox(height: NbSpace.xs),
+          CircularProgressIndicator(color: t.color.ink),
+          const SizedBox(height: NbSpace.md),
+          Text('Looking for a host…', style: t.text.body),
+          const SizedBox(height: NbSpace.xs),
           Text(
               'Make sure a device here is running in host mode\n'
               'and both are on the same Wi-Fi.',
               textAlign: TextAlign.center,
-              style: NbType.label),
+              style: t.text.label),
         ],
       ),
     );

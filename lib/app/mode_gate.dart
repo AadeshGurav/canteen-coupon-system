@@ -73,6 +73,7 @@ class _ModePicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -90,16 +91,16 @@ class _ModePicker extends ConsumerWidget {
                           width: 48, height: 48),
                       const SizedBox(width: NbSpace.sm),
                       Text('TIFFIN',
-                          style: NbType.display.copyWith(letterSpacing: 2)),
+                          style: t.text.display.copyWith(letterSpacing: 2)),
                     ],
                   ),
                   const SizedBox(height: NbSpace.lg),
-                  const Text('Set up this device', style: NbType.heading),
+                  Text('Set up this device', style: t.text.heading),
                   const SizedBox(height: NbSpace.sm),
-                  const Text(
+                  Text(
                       'One app, two roles. You can change this later '
                       'from Settings — your data stays put.',
-                      style: NbType.body),
+                      style: t.text.body),
                   const SizedBox(height: NbSpace.xl),
                   _ModeCard(
                     name: 'HOST',
@@ -146,13 +147,14 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return NbSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(name, style: NbType.heading),
+          Text(name, style: t.text.heading),
           const SizedBox(height: NbSpace.xs),
-          Text(blurb, style: NbType.body),
+          Text(blurb, style: t.text.body),
           const SizedBox(height: NbSpace.md),
           primary
               ? NbButton(label: action, onPressed: onTap)

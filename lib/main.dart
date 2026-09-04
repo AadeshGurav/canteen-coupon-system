@@ -4,6 +4,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app/appearance_providers.dart';
 import 'app/bootstrap.dart';
 import 'app/mode_gate.dart';
 import 'app/providers.dart';
@@ -44,15 +45,26 @@ Future<void> main() async {
   );
 }
 
-class CanteenApp extends StatelessWidget {
+class CanteenApp extends ConsumerWidget {
   const CanteenApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Light and dark are both built and handed to MaterialApp so "system"
+    // follows the OS without us watching for brightness changes ourselves.
+    final appearance = ref.watch(effectiveAppearanceProvider);
+    ThemeData themeFor(Brightness brightness) => buildTiffinTheme(
+          appearance.theme,
+          brightness,
+          motion: appearance.motion,
+        );
+
     return MaterialApp(
       title: 'Tiffin',
       debugShowCheckedModeBanner: false,
-      theme: buildNeobrutalismTheme(),
+      theme: themeFor(Brightness.light),
+      darkTheme: themeFor(Brightness.dark),
+      themeMode: appearance.mode,
       // i18n-ready from day one (CLAUDE.md §13) even though only en ships now.
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -118,26 +130,37 @@ class _FriendlyErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // This can be asked to render above MaterialApp — i.e. with no theme at
+    // all. A last-resort error screen that itself throws for want of a token
+    // would replace a readable message with Flutter's red box, so it falls
+    // back to fixed colours rather than asserting.
+    final t = context.maybeTokens;
+    final background = t?.color.warn ?? const Color(0xFFE8A317);
+    final foreground = t?.color.onWarn ?? const Color(0xFF1A1A1A);
+    final labelStyle = (t?.text.label ?? const TextStyle(fontSize: 13))
+        .copyWith(color: foreground);
+    final bodyStyle = (t?.text.body ?? const TextStyle(fontSize: 16))
+        .copyWith(color: foreground);
+
     return Container(
-      color: NbColors.warn,
+      color: background,
       padding: const EdgeInsets.all(NbSpace.md),
       alignment: Alignment.center,
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.bug_report, color: NbColors.onWarn, size: 40),
+            Icon(Icons.bug_report, color: foreground, size: 40),
             const SizedBox(height: NbSpace.sm),
             Text('This screen hit a problem.',
-                textAlign: TextAlign.center,
-                style: NbType.label.copyWith(color: NbColors.onWarn)),
+                textAlign: TextAlign.center, style: labelStyle),
             const SizedBox(height: NbSpace.xs),
             Text(
               kReleaseMode
                   ? 'Go back and try again — it has been written to the log.'
                   : '${details.exception}',
               textAlign: TextAlign.center,
-              style: NbType.body.copyWith(color: NbColors.onWarn),
+              style: bodyStyle,
             ),
           ],
         ),
