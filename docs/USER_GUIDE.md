@@ -1,7 +1,7 @@
-# User Guide — Canteen Coupon System (v2, native app)
+# Tiffin — User Guide (v2, native app)
 
 For the people running the canteen day to day. The system is now a single
-**Android app** (`Canteen Coupon`) installed on every device — no browser, no
+**app** (`Tiffin`) installed on every device — no browser, no
 laptop required. The product rules (units, meal windows, grace allowance, scan
 reversal, billing) are unchanged from v1; see `docs/PRD.md` §5–§8.
 

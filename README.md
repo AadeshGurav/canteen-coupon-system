@@ -1,4 +1,4 @@
-# Canteen Coupon System — v2 (native Flutter app)
+# Tiffin — canteen coupon system (v2, native Flutter app)
 
 A single-campus canteen tool that issues each student/staff member a permanent
 QR code, scans it at meal time for an instant accept/reject, and tracks meal
