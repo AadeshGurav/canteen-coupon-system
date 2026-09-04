@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/bootstrap.dart';
 import 'app/mode_gate.dart';
+import 'app/providers.dart';
+import 'core/app_mode.dart';
 import 'core/logging.dart';
 import 'ui/theme/app_theme.dart';
 import 'ui/theme/tokens.dart';
@@ -60,9 +62,51 @@ class CanteenApp extends StatelessWidget {
       supportedLocales: const [Locale('en')],
       // WithForegroundTask lets the plugin manage the app lifecycle cleanly
       // while the host-keep-alive service runs (PRD §13.3).
-      home: const WithForegroundTask(child: ModeGate()),
+      home: const WithForegroundTask(child: _AppRoot()),
     );
   }
+}
+
+/// Re-arms the LAN layer whenever the app comes back to the foreground: a
+/// client that was asleep re-runs discovery, a host re-checks its server is
+/// up. Discovery and mDNS registration both go stale across sleep/wake and
+/// Wi-Fi changes (CLAUDE.md §4.6).
+class _AppRoot extends ConsumerStatefulWidget {
+  const _AppRoot();
+
+  @override
+  ConsumerState<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends ConsumerState<_AppRoot>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    switch (ref.read(currentModeProvider)) {
+      case AppMode.client:
+        ref.read(hostBrowserProvider).restart();
+      case AppMode.host:
+        ref.read(hostServingProvider.notifier).ensureStarted();
+      case null:
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => const ModeGate();
 }
 
 /// Replaces Flutter's grey/yellow error box with something an operator can read

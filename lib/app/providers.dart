@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../core/app_mode.dart';
@@ -228,15 +229,15 @@ class HostServingController extends Notifier<HostServingState> {
   Future<void> _publishAndKeepAlive() async {
     final container = await ref.read(hostContainerProvider.future);
     final appName = await container.settings.readAppName();
+    final advertiser = ref.read(hostAdvertiserProvider);
+    // advertise() returns after its first attempt but keeps retrying in the
+    // background; discoveryOk reflects whether a client can find us *now*.
     try {
-      await ref
-          .read(hostAdvertiserProvider)
+      await advertiser
           .advertise(name: appName, port: AppConfig.defaultServerPort)
           .timeout(const Duration(seconds: 8));
-      state = state.copyWith(discoveryOk: true);
-    } catch (_) {
-      state = state.copyWith(discoveryOk: false);
-    }
+    } catch (_) {/* the internal retry loop carries on */}
+    state = state.copyWith(discoveryOk: advertiser.isAdvertising);
     try {
       await ref
           .read(hostKeepAliveProvider)
@@ -321,6 +322,41 @@ final discoveredHostsProvider = StreamProvider<List<DiscoveredHost>>((ref) {
 /// The host the operator picked from the discovery list.
 final selectedHostProvider = StateProvider<DiscoveredHost?>((_) => null);
 
+/// Remembers the last host a client successfully signed in to, so the next
+/// launch offers a one-tap reconnect instead of waiting on discovery again
+/// (CLAUDE.md §18.2: "behaves the same way every time").
+class LastHostStore {
+  LastHostStore(this._prefs);
+  final SharedPreferences _prefs;
+  static const _urlKey = 'last_host_url';
+  static const _nameKey = 'last_host_name';
+
+  DiscoveredHost? read() {
+    final url = _prefs.getString(_urlKey);
+    if (url == null) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host.isEmpty) return null;
+    return DiscoveredHost(
+      name: _prefs.getString(_nameKey) ?? uri.host,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : AppConfig.defaultServerPort,
+    );
+  }
+
+  Future<void> write(DiscoveredHost host) async {
+    await _prefs.setString(_urlKey, host.baseUrl);
+    await _prefs.setString(_nameKey, host.name);
+  }
+
+  Future<void> clear() async {
+    await _prefs.remove(_urlKey);
+    await _prefs.remove(_nameKey);
+  }
+}
+
+final lastHostStoreProvider = Provider<LastHostStore>(
+    (ref) => LastHostStore(ref.read(sharedPreferencesProvider)));
+
 final _apiClientProvider = Provider<ApiClient?>((ref) {
   final host = ref.watch(selectedHostProvider);
   if (host == null) return null;
@@ -363,6 +399,11 @@ class SessionController extends Notifier<AuthSession?> {
 
   Future<void> login(String username, String password) async {
     state = await ref.read(backendProvider).login(username, password);
+    // Client mode only: selectedHost is null on a host device.
+    final host = ref.read(selectedHostProvider);
+    if (host != null) {
+      await ref.read(lastHostStoreProvider).write(host);
+    }
   }
 
   Future<void> logout() async {

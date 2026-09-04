@@ -34,7 +34,7 @@ class ApiClient {
       };
 
   Future<dynamic> getJson(String path, {Map<String, dynamic>? query}) =>
-      _send(() => _http.get(_uri(path, query), headers: _headers));
+      _send(() => _http.get(_uri(path, query), headers: _headers), retries: 2);
 
   Future<dynamic> postJson(String path, Object? body,
           {Map<String, dynamic>? query}) =>
@@ -49,28 +49,38 @@ class ApiClient {
 
   /// Raw bytes (bill PDF, QR image).
   Future<List<int>> getBytes(String path) async {
-    final response =
-        await _guarded(() => _http.get(_uri(path), headers: _headers));
+    final response = await _guarded(
+        () => _http.get(_uri(path), headers: _headers),
+        retries: 2);
     _throwForStatus(response);
     return response.bodyBytes;
   }
 
-  Future<dynamic> _send(Future<http.Response> Function() call) async {
-    final response = await _guarded(call);
+  Future<dynamic> _send(Future<http.Response> Function() call,
+      {int retries = 0}) async {
+    final response = await _guarded(call, retries: retries);
     _throwForStatus(response);
     if (response.body.isEmpty) return null;
     return jsonDecode(response.body);
   }
 
-  Future<http.Response> _guarded(Future<http.Response> Function() call) async {
-    try {
-      return await call();
-    } on SocketException {
-      throw const HostUnreachableException();
-    } on http.ClientException {
-      throw const HostUnreachableException();
-    } on HttpException {
-      throw const HostUnreachableException();
+  /// Retries only transient transport failures, and only when [retries] > 0 —
+  /// callers pass it for GETs (safe to repeat), never for POST/PATCH/DELETE
+  /// (CLAUDE.md §4.5: a retried write without an idempotency key is a
+  /// duplicate-record generator). Backoff: 250ms, 500ms, 1s…
+  Future<http.Response> _guarded(Future<http.Response> Function() call,
+      {int retries = 0}) async {
+    for (var attempt = 0;; attempt++) {
+      try {
+        return await call();
+      } on SocketException {
+        if (attempt >= retries) throw const HostUnreachableException();
+      } on http.ClientException {
+        if (attempt >= retries) throw const HostUnreachableException();
+      } on HttpException {
+        if (attempt >= retries) throw const HostUnreachableException();
+      }
+      await Future<void>.delayed(Duration(milliseconds: 250 * (1 << attempt)));
     }
   }
 

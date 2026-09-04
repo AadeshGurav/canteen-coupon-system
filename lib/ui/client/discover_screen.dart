@@ -37,6 +37,7 @@ class DiscoverScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hosts = ref.watch(discoveredHostsProvider);
+    final lastHost = ref.read(lastHostStoreProvider).read();
 
     return Scaffold(
       appBar: AppBar(
@@ -58,6 +59,14 @@ class DiscoverScreen extends ConsumerWidget {
           children: [
             const Text('Canteen devices on this Wi-Fi', style: NbType.heading),
             const SizedBox(height: NbSpace.md),
+            if (lastHost != null) ...[
+              NbButton(
+                label: 'Reconnect to ${lastHost.name}',
+                icon: Icons.history,
+                onPressed: () => _connect(context, ref, lastHost),
+              ),
+              const SizedBox(height: NbSpace.md),
+            ],
             Expanded(
               child: AsyncView<List<DiscoveredHost>>(
                 value: hosts,
@@ -100,7 +109,10 @@ class DiscoverScreen extends ConsumerWidget {
             const SizedBox(height: NbSpace.md),
             NbButton.secondary(
               label: 'Search again',
-              onPressed: () => ref.invalidate(discoveredHostsProvider),
+              onPressed: () {
+                ref.read(hostBrowserProvider).restart();
+                ref.invalidate(discoveredHostsProvider);
+              },
             ),
             const SizedBox(height: NbSpace.sm),
             NbButton.secondary(
