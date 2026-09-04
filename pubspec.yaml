@@ -86,6 +86,8 @@ dev_dependencies:
   build_runner: ^2.16.1
   drift_dev: ^2.34.6
   riverpod_generator: ^4.0.8
+  # App-icon generator (build tooling only). Source art in assets/icon/.
+  flutter_launcher_icons: ^0.14.4
   # custom_lint / riverpod_lint are intentionally omitted: at these versions
   # their analyzer_plugin constraints don't co-resolve (riverpod_lint 3.1.8
   # wants ^0.14, the current custom_lint wants ^0.13). They're lint-only dev
@@ -97,3 +99,13 @@ flutter:
   generate: true
   assets:
     - assets/web_admin/
+
+# App icon — neobrutalism coupon/ticket stub. Regenerate after editing the
+# source art:  dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  android: true
+  adaptive_icon_background: "#F5F1E8"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  ios: true
+  remove_alpha_ios: true

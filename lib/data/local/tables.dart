@@ -293,7 +293,7 @@ class AppSettings extends Table {
 
   /// Branding shown in the app bar / tab title (PRD §6.8).
   TextColumn get appName =>
-      text().withDefault(const Constant('Canteen Coupon System'))();
+      text().withDefault(const Constant('Tiffin'))();
 
   IntColumn get prepLeadMinutes => integer().withDefault(const Constant(60))();
   IntColumn get purchaseLeadDays => integer().withDefault(const Constant(1))();

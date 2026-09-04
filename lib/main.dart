@@ -50,7 +50,7 @@ class CanteenApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Canteen Coupon System',
+      title: 'Tiffin',
       debugShowCheckedModeBanner: false,
       theme: buildNeobrutalismTheme(),
       // i18n-ready from day one (CLAUDE.md §13) even though only en ships now.

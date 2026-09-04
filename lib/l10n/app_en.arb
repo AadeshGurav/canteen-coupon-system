@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Canteen Coupon System",
+  "appTitle": "Tiffin",
   "@appTitle": { "description": "Default app name; overridden at runtime by the branding setting (PRD §6.8)." },
 
   "modeSetupTitle": "Set up this device",

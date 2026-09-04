@@ -35,7 +35,7 @@ class SelfSignedTls {
     final publicKey = pair.publicKey as RSAPublicKey;
 
     final csr = X509Utils.generateRsaCsrPem(
-      {'CN': commonName, 'O': 'Canteen Coupon System'},
+      {'CN': commonName, 'O': 'Tiffin'},
       privateKey,
       publicKey,
     );
