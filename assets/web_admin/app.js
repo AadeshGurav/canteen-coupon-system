@@ -722,7 +722,7 @@ views.users = async () => {
   const users = await api.get('/users');
 
   const open = (u) => {
-    const name = h('input', {}); name.value = u?.username ?? ''; if (u) name.disabled = true;
+    const name = h('input', {}); name.value = u?.username ?? '';
     const pw = h('input', { type: 'password', placeholder: u ? 'blank = keep' : '' });
     const role = h('select', {}, ...['admin', 'counter', 'scanner'].map((r) => h('option', { value: r }, r)));
     if (u) role.value = u.role;
@@ -732,7 +732,7 @@ views.users = async () => {
       h('label', {}, 'Role'), role, ...(u ? [h('label', {}, 'Status'), status] : [])), {
       onOk: async () => {
         let ok;
-        if (u) ok = await guard(() => api.patch(`/users/${u.id}`, { password: pw.value || undefined, role: role.value, status: status.value }), 'Saved.');
+        if (u) ok = await guard(() => api.patch(`/users/${u.id}`, { username: name.value.trim() === u.username ? undefined : name.value.trim(), password: pw.value || undefined, role: role.value, status: status.value }), 'Saved.');
         else ok = await guard(() => api.post('/users', { username: name.value.trim(), password: pw.value, role: role.value }), 'User created.');
         if (ok) render();
         return ok;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_mode.dart';
 import '../core/role.dart';
 import '../ui/admin/admin_dashboard.dart';
+import '../ui/auth/host_setup_screen.dart';
 import '../ui/auth/login_screen.dart';
 import '../ui/client/discover_screen.dart';
 import '../ui/counter/counter_home.dart';
@@ -20,8 +21,9 @@ import 'providers.dart';
 ///
 ///  1. no mode chosen        → mode picker
 ///  2. host, container ready? → wait / show error (+ auto-start serving)
-///  3. not signed in         → sign-in (host) or host discovery (client)
-///  4. signed in             → the role's home
+///  3. host with no accounts → first-run setup
+///  4. not signed in         → sign-in (host) or host discovery (client)
+///  5. signed in             → the role's home
 class ModeGate extends ConsumerWidget {
   const ModeGate({super.key});
 
@@ -46,6 +48,11 @@ class ModeGate extends ConsumerWidget {
           // away. Start/stop/certificate controls live in Admin ▸ Hosting.
           Future.microtask(
               () => ref.read(hostServingProvider.notifier).ensureStarted());
+          // A host with no accounts can't be signed in to — offer setup, not a
+          // login form nobody has credentials for.
+          if (ref.watch(setupRequiredProvider).asData?.value ?? false) {
+            return const HostSetupScreen();
+          }
           return session == null
               ? const LoginScreen()
               : _roleHome(session.role);

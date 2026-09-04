@@ -89,19 +89,16 @@ class HostContainer {
 
   final _log = log('host');
 
-  /// Runs once when the host starts: create the initial admin if there are no
-  /// users yet. Returns a generated password to show the operator once, or null
-  /// if an admin already existed or a password was configured.
-  Future<String?> bootstrap({
-    required String initialAdminUsername,
-    String? initialAdminPassword,
-  }) async {
-    final generated = await auth.bootstrapInitialAdmin(
-      username: initialAdminUsername,
-      password: initialAdminPassword,
-    );
-    _log.info('host_container_ready');
-    return generated;
+  /// Runs once when the host starts. Returns true when this device still needs
+  /// first-run setup — no account has been created yet.
+  ///
+  /// The admin is deliberately *not* created here any more: an account whose
+  /// password only ever existed in memory left hosts unreachable. The operator
+  /// chooses their own credentials on the setup screen instead.
+  Future<bool> bootstrap() async {
+    final needsSetup = await auth.needsSetup();
+    _log.info('host_container_ready needs_setup=$needsSetup');
+    return needsSetup;
   }
 
   Future<void> dispose() => db.close();

@@ -73,8 +73,9 @@ final hostDatabaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-/// The wired-up host container. Also runs the one-time admin bootstrap and
-/// stashes any generated first-run password for the console to show once.
+/// The wired-up host container. Opens the database and reports whether this
+/// device still owes first-run setup; it no longer creates an account itself
+/// (see [setupRequiredProvider] and HostSetupScreen).
 final hostContainerProvider = FutureProvider<HostContainer>((ref) async {
   final documentsDir = await ref.watch(_documentsDirProvider.future);
   // Host mode writes its log to a file (the admin's debugging tool, PRD §7).
@@ -85,17 +86,20 @@ final hostContainerProvider = FutureProvider<HostContainer>((ref) async {
     documentsDir: documentsDir,
     sessionTtl: const Duration(hours: _sessionTtlHours),
   );
-  final generated = await container.bootstrap(
-    initialAdminUsername: 'admin',
-    initialAdminPassword: null,
-  );
-  ref.read(generatedAdminPasswordProvider.notifier).state = generated;
+  await container.bootstrap();
   return container;
 });
 
-/// Set once by [hostContainerProvider] if a first-run admin password was
-/// generated — the host console surfaces it exactly once (never logged).
-final generatedAdminPasswordProvider = StateProvider<String?>((_) => null);
+/// True while this host has no accounts, i.e. first-run setup is still owed.
+///
+/// Derived from the database on every read rather than latched at boot, so it
+/// is correct after a data reset and cannot be missed by backgrounding the app
+/// at the wrong moment — the failure mode of the generated-password banner
+/// this replaced.
+final setupRequiredProvider = FutureProvider<bool>((ref) async {
+  final container = await ref.watch(hostContainerProvider.future);
+  return container.auth.needsSetup();
+});
 
 const int _sessionTtlHours = 12;
 
@@ -283,8 +287,8 @@ class HostServingController extends Notifier<HostServingState> {
   Future<void> resetAllData() async {
     await stop();
     await ref.read(hostDatabaseProvider).wipeAllData();
-    ref.read(generatedAdminPasswordProvider.notifier).state = null;
-    ref.invalidate(hostContainerProvider); // re-bootstrap → new first-run admin
+    ref.invalidate(hostContainerProvider);
+    ref.invalidate(setupRequiredProvider); // back to first-run setup
     ref.invalidate(sessionProvider);
     await ref.read(currentModeProvider.notifier).clear();
   }

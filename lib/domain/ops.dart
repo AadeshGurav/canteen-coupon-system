@@ -160,19 +160,24 @@ class UserDraft {
 }
 
 class UserPatch {
-  const UserPatch({this.password, this.role, this.status});
+  const UserPatch({this.username, this.password, this.role, this.status});
 
   factory UserPatch.fromJson(Map<String, dynamic> j) => UserPatch(
+        username: j['username'] as String?,
         password: j['password'] as String?,
         role: j['role'] == null ? null : Role.fromWire(j['role'] as String),
         status: j['status'] as String?,
       );
 
+  /// Renaming an account is allowed — including the admin's. Sessions hold a
+  /// denormalised copy, so UserService updates those in the same operation.
+  final String? username;
   final String? password;
   final Role? role;
   final String? status;
 
   Map<String, dynamic> toJson() => {
+        if (username != null) 'username': username,
         if (password != null) 'password': password,
         if (role != null) 'role': role!.wire,
         if (status != null) 'status': status,

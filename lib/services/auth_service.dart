@@ -120,31 +120,87 @@ class AuthService {
       (_db.select(_db.sessions)..where((s) => s.token.equals(token)))
           .getSingleOrNull();
 
-  // ---- bootstrap ------------------------------------------------------
+  // ---- first-run setup -------------------------------------------------
 
-  /// Creates one admin account iff the users table is empty (PRD §4). If no
-  /// password is supplied a random one is generated and RETURNED (never
-  /// logged — writing a plaintext credential to the rotating log file would
-  /// violate CLAUDE.md §7); the host console shows it once on first boot.
-  Future<String?> bootstrapInitialAdmin({
+  /// True while this host has no accounts at all — the state the setup screen
+  /// exists to resolve. Also true after a data reset, which is what makes
+  /// setup self-healing rather than a one-shot that can be missed.
+  Future<bool> needsSetup() async => (await _db.users.count().getSingle()) == 0;
+
+  /// Creates the first admin account with credentials the operator chose.
+  ///
+  /// This replaced a scheme that generated a password and displayed it once on
+  /// the login screen. The account was real, but the password lived only in
+  /// memory: background the app, restart it, or simply not read the banner,
+  /// and the host was left with an admin nobody could ever sign in as and no
+  /// way back except wiping the database. An operator who picks their own
+  /// password cannot be locked out by a missed notification.
+  ///
+  /// Guarded on an empty users table so it can never be used to mint a second
+  /// admin on a live host.
+  Future<void> createInitialAdmin({
     required String username,
-    String? password,
+    required String password,
   }) async {
-    final count = await _db.users.count().getSingle();
-    if (count > 0) return null;
+    if (!await needsSetup()) {
+      throw const ValidationException(
+          'This device is already set up. Sign in instead.');
+    }
+    final name = username.trim();
+    if (name.isEmpty) {
+      throw const ValidationException('Choose a username.');
+    }
+    requireStrongPassword(password);
 
-    final effective =
-        (password == null || password.isEmpty) ? _urlSafeToken(9) : password;
     final now = DateTime.now().toUtc();
     await _db.into(_db.users).insert(UsersCompanion.insert(
-          username: username,
-          passwordHash: hashPassword(effective),
+          username: name,
+          passwordHash: hashPassword(password),
           role: Role.admin.wire,
           createdAt: now,
           updatedAt: now,
         ));
-    _log.info('bootstrap_admin_created username=$username');
-    return (password == null || password.isEmpty) ? effective : null;
+    _log.info('initial_admin_created username=$name');
+  }
+
+  /// Rejects passwords that would make the host trivially reachable by anyone
+  /// on the same Wi-Fi. Deliberately a length floor rather than a character
+  /// -class rule: length is what actually helps, and rules people fight
+  /// produce `Password1!` (CLAUDE.md §11.2, Postel's Law on input).
+  static const minPasswordLength = 8;
+
+  void requireStrongPassword(String password) {
+    if (password.length < minPasswordLength) {
+      throw const ValidationException(
+          'Use at least $minPasswordLength characters.');
+    }
+  }
+
+  /// A strong password the operator can accept rather than invent. Returned,
+  /// never logged — a plaintext credential in the rotating log file would
+  /// violate CLAUDE.md §7.
+  String suggestPassword() => _urlSafeToken(9);
+
+  /// Last-resort recovery, host device only (see the route's role gate).
+  ///
+  /// Grants no privilege that physical possession of the host phone did not
+  /// already carry: that phone can already wipe the entire database from
+  /// Settings, which is strictly more destructive than a password reset.
+  Future<void> resetPasswordFor(String username, String newPassword) async {
+    requireStrongPassword(newPassword);
+    final updated = await (_db.update(_db.users)
+          ..where((u) => u.username.equals(username)))
+        .write(UsersCompanion(
+      passwordHash: Value(hashPassword(newPassword)),
+      updatedAt: Value(DateTime.now().toUtc()),
+    ));
+    if (updated == 0) {
+      throw ValidationException('No account called "$username".');
+    }
+    // Any session opened with the old password stops being valid.
+    await (_db.delete(_db.sessions)..where((s) => s.username.equals(username)))
+        .go();
+    _log.warning('admin_password_reset username=$username');
   }
 
   // ---- primitives --------------------------------------------------------

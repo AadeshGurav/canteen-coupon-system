@@ -99,8 +99,9 @@ class UsersScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (existing == null)
-                  NbTextField(label: 'Username', controller: username),
+                // Editable for an existing account too: the admin username
+                // used to be write-once, which left first-run naming permanent.
+                NbTextField(label: 'Username', controller: username),
                 const SizedBox(height: NbSpace.sm),
                 NbTextField(
                   label: existing == null
@@ -157,6 +158,9 @@ class UsersScreen extends ConsumerWidget {
         await backend.updateUser(
           existing.id,
           UserPatch(
+            username: username.text.trim() == existing.username
+                ? null
+                : username.text.trim(),
             password: password.text.isEmpty ? null : password.text,
             role: role,
             status: status,

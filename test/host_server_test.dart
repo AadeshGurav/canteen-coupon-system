@@ -34,9 +34,10 @@ void main() {
       documentsDir: tmp.path,
       sessionTtl: const Duration(hours: 12),
     );
-    await container.bootstrap(
-      initialAdminUsername: 'admin',
-      initialAdminPassword: 'admin-password-1',
+    await container.bootstrap();
+    await container.auth.createInitialAdmin(
+      username: 'admin',
+      password: 'admin-password-1',
     );
 
     // A stand-in for the materialized web-admin bundle.

@@ -56,7 +56,11 @@ class UserService {
   /// [actingUserId] guards the "can't deactivate/delete yourself" rules.
   Future<AppUser> update(int id, UserPatch patch,
       {required int actingUserId}) async {
+    if (patch.username != null) _validateUsername(patch.username!);
     final companion = UsersCompanion(
+      username: patch.username == null
+          ? const Value.absent()
+          : Value(patch.username!),
       passwordHash: patch.password == null
           ? const Value.absent()
           : Value(_auth.hashPassword(patch.password!)),
@@ -73,9 +77,27 @@ class UserService {
           'Password must be at least 8 characters.');
     }
 
-    final n = await (_db.update(_db.users)..where((u) => u.id.equals(id)))
-        .write(companion);
+    final int n;
+    try {
+      n = await (_db.update(_db.users)..where((u) => u.id.equals(id)))
+          .write(companion);
+    } on Exception catch (e) {
+      if (e.toString().toLowerCase().contains('unique')) {
+        throw ConflictException(
+            "Username '${patch.username}' is already taken.");
+      }
+      rethrow;
+    }
     if (n == 0) throw const NotFoundException('User not found.');
+
+    // Sessions carry a denormalised copy of the username (it is what the app
+    // bar shows and what request logs record), so a rename has to reach them
+    // too or the operator keeps seeing their old name until the token expires.
+    if (patch.username != null) {
+      await (_db.update(_db.sessions)..where((s) => s.userId.equals(id)))
+          .write(SessionsCompanion(username: Value(patch.username!)));
+    }
+
     _log.info('updated user_id=$id');
     final row = await (_db.select(_db.users)..where((u) => u.id.equals(id)))
         .getSingle();

@@ -8,6 +8,7 @@ import '../../core/app_mode.dart';
 import '../../core/errors.dart';
 import '../shared_widgets/ios_host_advisory.dart';
 import '../shared_widgets/nb_button.dart';
+import '../shared_widgets/nb_feedback.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../shared_widgets/nb_text_field.dart';
 import '../theme/tokens.dart';
@@ -59,12 +60,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  /// Sets a new password for an account on this host, on the host device only.
+  Future<void> _recoverPassword() async {
+    final container = await ref.read(hostContainerProvider.future);
+    if (!mounted) return;
+    final username = _username.text.trim();
+    final result = await showDialog<({String username, String password})>(
+      context: context,
+      builder: (_) => _RecoverPasswordDialog(
+        initialUsername: username.isEmpty ? 'admin' : username,
+        suggestion: container.auth.suggestPassword(),
+      ),
+    );
+    if (result == null) return;
+
+    setState(() => _busy = true);
+    try {
+      await container.auth.resetPasswordFor(result.username, result.password);
+      _username.text = result.username;
+      _password.text = result.password;
+      setState(() => _error = null);
+      if (mounted) {
+        showNbSnack(context, 'Password reset. Sign in to continue.');
+      }
+    } on AppException catch (e) {
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
     final branding = ref.watch(_brandingProvider);
     final isHost = ref.watch(currentModeProvider) == AppMode.host;
-    final firstRunPassword = ref.watch(generatedAdminPasswordProvider);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -119,32 +149,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
-                  if (firstRunPassword != null) ...[
-                    const SizedBox(height: NbSpace.md),
-                    NbSurface(
-                      intensity: NbIntensity.full,
-                      background: t.color.warn,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('FIRST-RUN ADMIN PASSWORD',
-                              style:
-                                  t.text.label.copyWith(color: t.color.onWarn)),
-                          const SizedBox(height: NbSpace.xs),
-                          SelectableText(firstRunPassword,
-                              style: t.text.heading
-                                  .copyWith(color: t.color.onWarn)),
-                          const SizedBox(height: NbSpace.xs),
-                          Text(
-                            'Username "admin". Shown once, never written to a '
-                            'log. Change it from Users after signing in.',
-                            style: t.text.body.copyWith(color: t.color.onWarn),
-                          ),
-                        ],
-                      ),
+                  // Recovery is offered only on the host device, and never
+                  // over the network: it runs against the local database, so
+                  // it grants nothing that holding this phone didn't already
+                  // grant — the same phone can wipe the database outright.
+                  if (isHost)
+                    TextButton.icon(
+                      icon: const Icon(Icons.lock_reset, size: 18),
+                      label: const Text('Forgot the password?'),
+                      onPressed: _busy ? null : _recoverPassword,
                     ),
-                    const SizedBox(height: NbSpace.md),
-                  ],
                   if (isHost && Platform.isIOS) ...[
                     const SizedBox(height: NbSpace.md),
                     const IosHostAdvisory(),
@@ -170,3 +184,85 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 final _brandingProvider = FutureProvider.autoDispose<String>((ref) {
   return ref.watch(backendProvider).branding();
 });
+
+/// Typed confirmation for the host-device password reset. Requires the word
+/// RESET, matching the pattern the destructive data wipe already uses, so a
+/// stray tap on a shared phone can't change a credential.
+class _RecoverPasswordDialog extends StatefulWidget {
+  const _RecoverPasswordDialog({
+    required this.initialUsername,
+    required this.suggestion,
+  });
+
+  final String initialUsername;
+  final String suggestion;
+
+  @override
+  State<_RecoverPasswordDialog> createState() => _RecoverPasswordDialogState();
+}
+
+class _RecoverPasswordDialogState extends State<_RecoverPasswordDialog> {
+  late final _username = TextEditingController(text: widget.initialUsername);
+  late final _password = TextEditingController(text: widget.suggestion);
+  final _confirm = TextEditingController();
+
+  @override
+  void dispose() {
+    _username.dispose();
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final armed = _confirm.text.trim().toUpperCase() == 'RESET';
+    return AlertDialog(
+      title: Text('Reset a password', style: t.text.heading),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Only possible on this host device. The new password is shown '
+              'below — write it down, it cannot be read back afterwards. Any '
+              'open session for this account is signed out.',
+              style: t.text.body,
+            ),
+            const SizedBox(height: NbSpace.md),
+            NbTextField(label: 'Account', controller: _username),
+            const SizedBox(height: NbSpace.sm),
+            NbTextField(label: 'New password', controller: _password),
+            const SizedBox(height: NbSpace.sm),
+            NbTextField(
+              label: 'Type RESET to confirm',
+              controller: _confirm,
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        NbButton(
+          label: 'Reset password',
+          background: t.color.reject,
+          onPressed: armed
+              ? () => Navigator.pop(
+                    context,
+                    (
+                      username: _username.text.trim(),
+                      password: _password.text,
+                    ),
+                  )
+              : null,
+        ),
+      ],
+    );
+  }
+}
