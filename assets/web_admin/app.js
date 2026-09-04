@@ -814,11 +814,17 @@ const NAV = [
   ['refunds', 'Refunds'], ['settings', 'Settings'], ['users', 'Users'],
 ];
 
+const spinner = () => h('div', { class: 'spinner' });
+
+let _shellRoute = null;
+let _mainEl = null;
+
 async function render() {
   const app = $('#app');
   const route = (location.hash.replace('#/', '') || 'members');
 
   if (!api.token || route === 'login') {
+    _shellRoute = null;
     app.replaceChildren(await views.login());
     return;
   }
@@ -826,19 +832,28 @@ async function render() {
   const allowed = role === 'admin' ? NAV : NAV.filter(([k]) => ['topups', 'purchase'].includes(k));
   const view = views[route] || views.members;
 
-  const side = h('nav', { class: 'side' },
-    h('div', { class: 'brand' }, 'TIFFIN · ADMIN'),
-    ...allowed.map(([k, label]) => h('a', { href: '#/' + k, class: route === k ? 'active' : '' }, label)),
-    h('div', { class: 'spacer' }),
-    h('div', { class: 'muted' }, localStorage.getItem('canteen_user') + ' · ' + role),
-    h('button', { class: 'ghost', onclick: () => { api.token = null; location.hash = '#/login'; } }, 'Sign out'));
-
-  const mainEl = h('main', {}, h('div', { class: 'muted' }, 'Loading…'));
-  app.replaceChildren(h('div', { class: 'shell' }, side, mainEl));
+  // Rebuild the shell only on a route *change*; a same-route re-render (after a
+  // create/edit/delete) just swaps the main pane, so the nav never flashes and
+  // the old content stays visible (dimmed) until the new data lands.
+  if (_shellRoute !== route || !_mainEl || !document.body.contains(_mainEl)) {
+    const side = h('nav', { class: 'side' },
+      h('div', { class: 'brand' }, 'TIFFIN · ADMIN'),
+      ...allowed.map(([k, label]) => h('a', { href: '#/' + k, class: route === k ? 'active' : '' }, label)),
+      h('div', { class: 'spacer' }),
+      h('div', { class: 'muted' }, localStorage.getItem('canteen_user') + ' · ' + role),
+      h('button', { class: 'ghost', onclick: () => { api.token = null; location.hash = '#/login'; } }, 'Sign out'));
+    _mainEl = h('main', {}, spinner());
+    app.replaceChildren(h('div', { class: 'shell' }, side, _mainEl));
+    _shellRoute = route;
+  }
+  _mainEl.classList.add('loading');
   try {
-    mainEl.replaceChildren(await view());
+    const node = await view();
+    _mainEl.classList.remove('loading');
+    _mainEl.replaceChildren(node);
   } catch (e) {
-    mainEl.replaceChildren(h('div', { class: 'card', style: 'border-color:var(--reject)' },
+    _mainEl.classList.remove('loading');
+    _mainEl.replaceChildren(h('div', { class: 'card', style: 'border-color:var(--reject)' },
       h('h2', {}, 'Could not load'), h('div', {}, e.message || String(e)),
       h('button', { onclick: render, style: 'margin-top:12px' }, 'Retry')));
   }

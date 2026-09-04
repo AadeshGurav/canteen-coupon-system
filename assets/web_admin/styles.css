@@ -49,6 +49,14 @@ nav.side a {
 nav.side a.active { background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow); }
 nav.side .spacer { flex: 1; }
 main { padding: var(--s-lg); overflow: auto; }
+main.loading { opacity: .5; pointer-events: none; transition: opacity .12s ease; }
+
+.spinner {
+  width: 28px; height: 28px; margin: 48px auto;
+  border: 4px solid var(--surface-muted); border-top-color: var(--ink);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Cards / tables -------------------------------------------------------- */
 .card {

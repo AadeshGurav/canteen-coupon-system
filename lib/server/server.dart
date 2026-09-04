@@ -74,6 +74,7 @@ class HostServer {
 
     final handler = const Pipeline()
         .addMiddleware(corsMiddleware())
+        .addMiddleware(cacheControlMiddleware())
         .addMiddleware(errorMiddleware())
         .addHandler(_root());
 

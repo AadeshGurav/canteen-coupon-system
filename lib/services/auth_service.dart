@@ -26,6 +26,11 @@ class AuthService {
   static const _keyLen = 32;
   final _random = Random.secure();
 
+  /// Throttle for [sweepExpired] — the web admin fires many requests per
+  /// screen and a DELETE-scan on every one is wasted work.
+  DateTime? _lastSweep;
+  static const _sweepEvery = Duration(minutes: 5);
+
   // ---- password hashing -------------------------------------------------
 
   String hashPassword(String password) {
@@ -99,12 +104,15 @@ class AuthService {
     await (_db.delete(_db.sessions)..where((s) => s.token.equals(token))).go();
   }
 
-  /// Opportunistic cleanup — call from the auth middleware on a cadence, or
-  /// just let it run on every `requireSession`. Cheap; no scheduled job.
+  /// Opportunistic cleanup — safe to call from the auth middleware on every
+  /// request; it self-throttles to once per [_sweepEvery] so it isn't a DB
+  /// write per API call. No scheduled job.
   Future<void> sweepExpired() async {
+    final now = DateTime.now().toUtc();
+    if (_lastSweep != null && now.difference(_lastSweep!) < _sweepEvery) return;
+    _lastSweep = now;
     await (_db.delete(_db.sessions)
-          ..where(
-              (s) => s.expiresAt.isSmallerThanValue(DateTime.now().toUtc())))
+          ..where((s) => s.expiresAt.isSmallerThanValue(now)))
         .go();
   }
 

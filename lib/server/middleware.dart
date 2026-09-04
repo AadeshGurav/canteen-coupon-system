@@ -65,6 +65,20 @@ const _corsHeaders = {
   'access-control-allow-headers': 'authorization, content-type',
 };
 
+/// API responses must never be cached (a stale member list or balance is a
+/// correctness bug); the static desktop-admin bundle may be cached but must
+/// always revalidate, so a rebuilt host serves the new JS immediately.
+Middleware cacheControlMiddleware() => (Handler inner) {
+      return (Request request) async {
+        final response = await inner(request);
+        if (response.headers.containsKey('cache-control')) return response;
+        final isApi = request.url.path.startsWith('api/');
+        return response.change(headers: {
+          'cache-control': isApi ? 'no-store' : 'no-cache',
+        });
+      };
+    };
+
 /// The authenticated caller, attached to the request context by
 /// [authMiddleware] and read by handlers via [callerOf].
 class Caller {

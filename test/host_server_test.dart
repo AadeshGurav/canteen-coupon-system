@@ -201,6 +201,22 @@ void main() {
     tlsClient.close(force: true);
   });
 
+  test('cache-control: no-store on /api, no-cache on the static bundle',
+      () async {
+    final apiRes = await _send(http, 'GET', '$base/api/settings/branding');
+    expect(apiRes.status, 200);
+
+    final rawApi =
+        await (await http.getUrl(Uri.parse('$base/api/settings/branding')))
+            .close();
+    expect(rawApi.headers.value('cache-control'), 'no-store');
+    await rawApi.drain<void>();
+
+    final rawStatic = await (await http.getUrl(Uri.parse('$base/'))).close();
+    expect(rawStatic.headers.value('cache-control'), 'no-cache');
+    await rawStatic.drain<void>();
+  });
+
   test('desktop-admin web bundle is served at / and its assets', () async {
     final index = await _send(http, 'GET', '$base/');
     expect(index.status, 200);
