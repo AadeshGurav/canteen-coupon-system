@@ -68,6 +68,38 @@ class SessionMemory {
     }
   }
 
+  /// Signs out, and makes it stick.
+  ///
+  /// Clearing the session alone was not enough: the login screen offers any
+  /// saved token straight back, so an explicit sign-out has to drop the token
+  /// too or the operator is signed back in before the form is drawn. The
+  /// username (and the password, if it was opted into) are kept — signing out
+  /// should cost a tap, not the whole convenience.
+  Future<void> signOut() async {
+    // Read before the session is cleared; afterwards there is no username.
+    final username = _ref.read(sessionProvider)?.username;
+    String? hostId;
+    try {
+      hostId = (await _ref.read(hostGreetingProvider.future)).hostId;
+    } catch (_) {
+      // Host unreachable — sign out locally anyway rather than trapping
+      // someone on a screen because the network is down.
+    }
+
+    await _ref.read(sessionProvider.notifier).logout();
+
+    if (hostId != null && hostId.isNotEmpty && username != null) {
+      try {
+        await _ref
+            .read(credentialStoreProvider)
+            .invalidateToken(hostId, username);
+        _ref.invalidate(savedLoginsForHostProvider);
+      } catch (e) {
+        _log.warning('signed out but could not drop the saved token', e);
+      }
+    }
+  }
+
   /// Tries to resume a saved session on the current host without a password.
   ///
   /// The stored expiry is only a hint — the host is asked to confirm the token

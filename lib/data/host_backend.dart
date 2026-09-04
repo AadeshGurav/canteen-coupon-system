@@ -24,6 +24,11 @@ class HostBackend implements Backend {
   int? _userId;
   String _username = 'host';
 
+  /// Held so [logout] can delete the row it created. Without it the session
+  /// outlived the sign-out, and a device that remembered the token signed
+  /// itself straight back in.
+  String? _token;
+
   void _requireSession() {
     if (_userId == null) {
       throw const AuthException('Not logged in on this device.');
@@ -37,8 +42,7 @@ class HostBackend implements Backend {
       throw const AuthException('Incorrect username or password.');
     }
     final session = await _c.auth.createSession(user);
-    _userId = session.userId;
-    _username = session.username;
+    _adopt(session.userId, session.username, session.token);
     return AuthSession(
       token: session.token,
       username: session.username,
@@ -48,8 +52,17 @@ class HostBackend implements Backend {
 
   @override
   Future<void> logout() async {
-    _userId = null;
-    _username = 'host';
+    final token = _token;
+    _adopt(null, 'host', null);
+    // Deleting the row is the actual sign-out; clearing the local fields only
+    // ever made this instance forget.
+    if (token != null) await _c.auth.deleteSession(token);
+  }
+
+  void _adopt(int? userId, String username, String? token) {
+    _userId = userId;
+    _username = username;
+    _token = token;
   }
 
   @override
@@ -59,6 +72,10 @@ class HostBackend implements Backend {
   Future<AuthSession?> resumeSession(String token) async {
     try {
       final session = await _c.auth.requireSession(token);
+      // Adopting the session matters as much as returning it: without this the
+      // caller looks signed in while every authed call still trips
+      // _requireSession.
+      _adopt(session.userId, session.username, session.token);
       return AuthSession(
         token: session.token,
         username: session.username,

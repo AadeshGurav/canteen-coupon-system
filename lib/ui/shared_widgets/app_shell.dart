@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/session_memory.dart';
 import '../../domain/ops.dart';
 import '../settings/appearance_screen.dart';
 import '../theme/tokens.dart';
@@ -41,7 +42,7 @@ class NbAppBar extends ConsumerWidget implements PreferredSizeWidget {
             _ShellAction.appearance => Navigator.of(context).push(
                 tiffinRoute<void>(context, () => const AppearanceScreen()),
               ),
-            _ShellAction.signOut => ref.read(sessionProvider.notifier).logout(),
+            _ShellAction.signOut => ref.read(sessionMemoryProvider).signOut(),
           },
           itemBuilder: (_) => const [
             PopupMenuItem(
