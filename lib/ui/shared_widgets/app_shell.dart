@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../domain/ops.dart';
 import '../settings/appearance_screen.dart';
 import '../theme/tokens.dart';
+import 'frosted_panel.dart';
 import 'nb_feedback.dart';
 
 enum _ShellAction { appearance, signOut }
@@ -104,11 +105,13 @@ class _NotificationBell extends ConsumerWidget {
     final t = context.tokens;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: t.color.surface,
+      backgroundColor: sheetBackground(context),
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: t.color.ink, width: t.shape.borderBold),
+        borderRadius: BorderRadius.vertical(top: t.shape.radius.topLeft),
+        side: BorderSide(color: t.color.border, width: t.shape.borderBold),
       ),
-      builder: (_) => SafeArea(
+      builder: (_) => FrostedPanel(
+          child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(NbSpace.lg),
           child: Column(
@@ -149,7 +152,7 @@ class _NotificationBell extends ConsumerWidget {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

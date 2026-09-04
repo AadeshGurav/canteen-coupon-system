@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'frosted_panel.dart';
 import 'nb_text_field.dart';
 
 /// A tappable field that opens a searchable list — the "combo box" pattern for
@@ -108,13 +109,15 @@ Future<String?> showNbSearchPicker({
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: t.color.surface,
+    backgroundColor: sheetBackground(context),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: t.shape.radius.topLeft),
       side: BorderSide(color: t.color.border, width: t.shape.borderBold),
     ),
-    builder: (_) =>
-        _SearchPickerSheet(title: title, options: options, selected: selected),
+    builder: (_) => FrostedPanel(
+      child: _SearchPickerSheet(
+          title: title, options: options, selected: selected),
+    ),
   );
 }
 

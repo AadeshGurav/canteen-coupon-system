@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'app_logo.dart';
 
 /// The in-app landing / loading screen — the same ticket mark and ground as
 /// the native splash, so the hand-off from OS splash to Flutter is seamless.
@@ -19,12 +20,7 @@ class BrandSplash extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              'assets/icon/icon_foreground.png',
-              width: 132,
-              height: 132,
-              filterQuality: FilterQuality.medium,
-            ),
+            const AppLogo(size: 132),
             const SizedBox(height: NbSpace.md),
             Text('TIFFIN', style: t.text.display.copyWith(letterSpacing: 2)),
             if (message != null) ...[

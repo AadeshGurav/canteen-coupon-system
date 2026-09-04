@@ -8,6 +8,7 @@ import '../ui/auth/login_screen.dart';
 import '../ui/client/discover_screen.dart';
 import '../ui/counter/counter_home.dart';
 import '../ui/scanner/scanner_screen.dart';
+import '../ui/shared_widgets/app_logo.dart';
 import '../ui/shared_widgets/brand_splash.dart';
 import '../ui/shared_widgets/nb_button.dart';
 import '../ui/shared_widgets/nb_feedback.dart';
@@ -85,15 +86,7 @@ class _ModePicker extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Image.asset('assets/icon/icon_foreground.png',
-                          width: 48, height: 48),
-                      const SizedBox(width: NbSpace.sm),
-                      Text('TIFFIN',
-                          style: t.text.display.copyWith(letterSpacing: 2)),
-                    ],
-                  ),
+                  const AppWordmark(),
                   const SizedBox(height: NbSpace.lg),
                   Text('Set up this device', style: t.text.heading),
                   const SizedBox(height: NbSpace.sm),
