@@ -7,6 +7,7 @@ import '../../data/backend.dart';
 import '../../domain/settings.dart';
 import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_feedback.dart';
+import '../shared_widgets/nb_picker.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../shared_widgets/nb_text_field.dart';
 import '../theme/tokens.dart';
@@ -175,16 +176,11 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             ),
           ),
         _section('Timezone (IANA)'),
-        NbSurface(
-          child: DropdownButton<String>(
-            value: zones.contains(_timezone) ? _timezone : zones.first,
-            isExpanded: true,
-            underline: const SizedBox.shrink(),
-            items: [
-              for (final z in zones) DropdownMenuItem(value: z, child: Text(z)),
-            ],
-            onChanged: (z) => setState(() => _timezone = z ?? _timezone),
-          ),
+        NbPickerField(
+          label: 'Timezone',
+          value: zones.contains(_timezone) ? _timezone : zones.first,
+          options: zones,
+          onSelected: (z) => setState(() => _timezone = z),
         ),
         _section('Grace allowance'),
         SwitchListTile(

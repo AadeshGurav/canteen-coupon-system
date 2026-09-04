@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -46,7 +46,25 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
           await _seedSettingsRow();
         },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // A column DEFAULT lives in the CREATE TABLE, so changing it means
+            // recreating the table; TableMigration carries the existing rows
+            // across unchanged.
+            await m.alterTable(TableMigration(appSettings));
+            await _adoptLocalTimezoneDefault();
+          }
+        },
       );
+
+  /// v1 shipped with a `UTC` timezone default, which is wrong for every real
+  /// deployment — meal windows are local wall-clock times. Correct only the
+  /// installs still sitting on that untouched default; an admin who chose UTC
+  /// deliberately is indistinguishable, but on a pre-pilot app that trade is
+  /// worth one wrong guess against every install silently keeping a bad zone.
+  Future<void> _adoptLocalTimezoneDefault() => (update(appSettings)
+        ..where((s) => s.localTimezone.equals('UTC')))
+      .write(const AppSettingsCompanion(localTimezone: Value('Asia/Kolkata')));
 
   Future<void> _seedSettingsRow() => into(appSettings).insert(
         const AppSettingsCompanion(id: Value(0)),

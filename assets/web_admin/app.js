@@ -765,7 +765,12 @@ views.settings = async () => {
     win[m] = { st, en };
     return h('div', {}, h('label', {}, m), h('div', { class: 'row' }, st, en));
   };
-  const tz = h('select', {}, ...zones.map((z) => h('option', { value: z, ...(z === s.localTimezone ? { selected: true } : {}) }, z)));
+  // Type-to-filter combobox rather than a 600-option <select>: the browser
+  // filters a <datalist> natively. A typo is caught server-side by the tz
+  // validator, so a bad value fails loudly instead of being silently kept.
+  const tzList = h('datalist', { id: 'tz-options' }, ...zones.map((z) => h('option', { value: z })));
+  const tz = h('input', { list: 'tz-options', placeholder: 'Search zones, e.g. Asia/Kolkata' });
+  tz.value = s.localTimezone;
   const graceOn = h('input', { type: 'checkbox', style: 'width:auto', ...(s.graceAllowanceEnabled ? { checked: true } : {}) });
 
   const save = async () => {
@@ -793,7 +798,7 @@ views.settings = async () => {
       field('breakfast', 'Breakfast', s.unitPrices.breakfast, 'number'),
       field('brunch', 'Brunch', s.unitPrices.brunch, 'number'))),
     h('div', { class: 'card' }, h('h3', {}, 'Meal windows (HH:MM)'), winRow('breakfast'), winRow('lunch'), winRow('brunch')),
-    h('div', { class: 'card' }, h('h3', {}, 'Timezone'), tz),
+    h('div', { class: 'card' }, h('h3', {}, 'Timezone'), tz, tzList),
     h('div', { class: 'card' }, h('h3', {}, 'Grace allowance'),
       h('label', { style: 'display:flex;gap:8px;text-transform:none' }, graceOn, 'Enabled'),
       field('graceUnits', 'Default grace units', s.graceAllowanceUnits, 'number')),

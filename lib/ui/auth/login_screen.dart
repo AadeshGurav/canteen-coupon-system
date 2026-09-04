@@ -75,35 +75,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (isHost && Platform.isIOS) ...[
-                    const IosHostAdvisory(),
-                    const SizedBox(height: NbSpace.md),
-                  ],
-                  if (firstRunPassword != null) ...[
-                    NbSurface(
-                      intensity: NbIntensity.full,
-                      background: NbColors.warn,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('FIRST-RUN ADMIN PASSWORD',
-                              style: NbType.label
-                                  .copyWith(color: NbColors.onWarn)),
-                          const SizedBox(height: NbSpace.xs),
-                          SelectableText(firstRunPassword,
-                              style: NbType.heading
-                                  .copyWith(color: NbColors.onWarn)),
-                          const SizedBox(height: NbSpace.xs),
-                          Text(
-                            'Username "admin". Shown once, never written to a '
-                            'log. Change it from Users after signing in.',
-                            style: NbType.body.copyWith(color: NbColors.onWarn),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: NbSpace.md),
-                  ],
+                  // The sign-in card comes first — advisories are context, not
+                  // the task, and pushing the fields down the screen buries the
+                  // one thing the operator opened this screen to do.
                   NbSurface(
                     intensity: NbIntensity.full,
                     child: Column(
@@ -145,6 +119,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
+                  if (firstRunPassword != null) ...[
+                    const SizedBox(height: NbSpace.md),
+                    NbSurface(
+                      intensity: NbIntensity.full,
+                      background: NbColors.warn,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('FIRST-RUN ADMIN PASSWORD',
+                              style: NbType.label
+                                  .copyWith(color: NbColors.onWarn)),
+                          const SizedBox(height: NbSpace.xs),
+                          SelectableText(firstRunPassword,
+                              style: NbType.heading
+                                  .copyWith(color: NbColors.onWarn)),
+                          const SizedBox(height: NbSpace.xs),
+                          Text(
+                            'Username "admin". Shown once, never written to a '
+                            'log. Change it from Users after signing in.',
+                            style: NbType.body.copyWith(color: NbColors.onWarn),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: NbSpace.md),
+                  ],
+                  if (isHost && Platform.isIOS) ...[
+                    const SizedBox(height: NbSpace.md),
+                    const IosHostAdvisory(),
+                  ],
                   const SizedBox(height: NbSpace.md),
                   TextButton.icon(
                     icon: const Icon(Icons.swap_horiz, size: 18),

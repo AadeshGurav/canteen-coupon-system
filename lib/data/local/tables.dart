@@ -282,7 +282,10 @@ class AppSettings extends Table {
   TextColumn get brunchEnd => text().withDefault(const Constant('12:00'))();
 
   /// IANA name (PRD §6.8). Validated against the tz database before write.
-  TextColumn get localTimezone => text().withDefault(const Constant('UTC'))();
+  /// Defaults to the deployment's own zone rather than UTC — a canteen's meal
+  /// windows are local wall-clock times, so UTC is wrong everywhere it runs.
+  TextColumn get localTimezone =>
+      text().withDefault(const Constant('Asia/Kolkata'))();
 
   TextColumn get upiId => text().withDefault(const Constant(''))();
   TextColumn get upiPayeeName => text().withDefault(const Constant(''))();

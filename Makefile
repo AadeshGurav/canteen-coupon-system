@@ -1,4 +1,4 @@
-.PHONY: setup gen watch run apk ios analyze test format clean doctor
+.PHONY: setup gen watch run apk ios analyze test format clean doctor schema
 
 # Zero-touch setup (CLAUDE.md §9): one command from a fresh checkout to a
 # runnable app.
@@ -14,6 +14,14 @@ gen:
 # Same, but rebuilds on save during development.
 watch:
 	dart run build_runner watch
+
+# Snapshot the current schema and regenerate the migration-test helpers.
+# Run this AFTER bumping AppDatabase.schemaVersion and changing a table, so
+# test/migration_test.dart can run the real migration against the real
+# previous version — the host's database is the only copy of the data.
+schema:
+	dart run drift_dev schema dump lib/data/local/database.dart drift_schemas/
+	dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
 
 # Run on a connected Android device / emulator.
 run:

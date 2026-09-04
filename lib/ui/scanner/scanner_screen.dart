@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../app/providers.dart';
 import '../../core/errors.dart';
 import '../../domain/ledger.dart';
+import '../shared_widgets/app_shell.dart';
 import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../theme/tokens.dart';
@@ -16,7 +17,13 @@ import '../theme/tokens.dart';
 /// screen and is readable at a glance — colour + icon + border weight + text,
 /// never colour alone (PRD §14.3).
 class ScannerScreen extends ConsumerStatefulWidget {
-  const ScannerScreen({super.key});
+  const ScannerScreen({super.key, this.isRoleHome = false});
+
+  /// True when this is the scanner role's home screen rather than a screen
+  /// pushed from the admin/counter home. A role home has nothing to pop back
+  /// to, so it must carry sign-out itself — otherwise a scanner-role login is
+  /// stranded with no way out.
+  final bool isRoleHome;
 
   @override
   ConsumerState<ScannerScreen> createState() => _ScannerScreenState();
@@ -74,21 +81,26 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cameraActions = [
+      IconButton(
+        icon: const Icon(Icons.flash_on),
+        tooltip: 'Torch',
+        onPressed: () => _controller.toggleTorch(),
+      ),
+      IconButton(
+        icon: const Icon(Icons.cameraswitch),
+        tooltip: 'Switch camera',
+        onPressed: () => _controller.switchCamera(),
+      ),
+    ];
+    final username = ref.watch(sessionProvider)?.username ?? '';
     return Scaffold(
       backgroundColor: NbColors.ink,
-      appBar: AppBar(
-        title: const Text('SCAN'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.flash_on),
-            onPressed: () => _controller.toggleTorch(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.cameraswitch),
-            onPressed: () => _controller.switchCamera(),
-          ),
-        ],
-      ),
+      // As a role home there is no back button, so use the shared bar that
+      // carries sign-out; pushed from admin/counter the parent already has it.
+      appBar: widget.isRoleHome
+          ? NbAppBar(title: 'Scan · $username', actions: cameraActions)
+          : AppBar(title: const Text('SCAN'), actions: cameraActions),
       body: Stack(
         fit: StackFit.expand,
         children: [

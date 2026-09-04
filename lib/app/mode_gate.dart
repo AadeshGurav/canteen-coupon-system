@@ -58,7 +58,7 @@ class ModeGate extends ConsumerWidget {
   }
 
   Widget _roleHome(Role role) => switch (role) {
-        Role.scanner => const ScannerScreen(),
+        Role.scanner => const ScannerScreen(isRoleHome: true),
         Role.counter => const CounterHome(),
         Role.admin => const AdminDashboard(),
       };
