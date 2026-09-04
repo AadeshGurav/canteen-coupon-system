@@ -220,12 +220,148 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             label: 'Save settings',
             busy: _busy,
             onPressed: _busy ? null : _save),
+        _section('Device'),
+        NbSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('This device is running as ${isHost ? 'HOST' : 'CLIENT'}.',
+                  style: NbType.body),
+              const SizedBox(height: NbSpace.xs),
+              const Text(
+                'Switching role signs you out and returns to setup. Nothing is '
+                'deleted — the host database stays on this device.',
+                style: NbType.body,
+              ),
+              const SizedBox(height: NbSpace.md),
+              NbButton.secondary(
+                label: 'Switch device role',
+                icon: Icons.swap_horiz,
+                onPressed: () => _confirmSwitchRole(context, ref),
+              ),
+            ],
+          ),
+        ),
+        if (isHost) ...[
+          const SizedBox(height: NbSpace.md),
+          NbSurface(
+            intensity: NbIntensity.full,
+            background: NbColors.reject,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('RESET ALL DATA',
+                    style: NbType.label.copyWith(color: NbColors.onReject)),
+                const SizedBox(height: NbSpace.xs),
+                Text(
+                  'Permanently deletes every member, top-up, scan, bill, menu '
+                  'entry and user on this host. There is no undo and no backup. '
+                  'The device returns to first-run setup.',
+                  style: NbType.body.copyWith(color: NbColors.onReject),
+                ),
+                const SizedBox(height: NbSpace.md),
+                NbButton(
+                  label: 'Reset all data',
+                  icon: Icons.delete_forever,
+                  background: NbColors.surface,
+                  foreground: NbColors.reject,
+                  onPressed: () => _confirmReset(context, ref),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: NbSpace.xl),
       ],
     );
+  }
+
+  Future<void> _confirmSwitchRole(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Switch device role?'),
+        content: const Text(
+            'You will be signed out and taken back to Host / Client setup. '
+            'Your data is not touched.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Switch')),
+        ],
+      ),
+    );
+    if (ok == true) await ref.read(currentModeProvider.notifier).clear();
+  }
+
+  Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => const _ResetConfirmDialog(),
+    );
+    if (ok == true && context.mounted) {
+      await runGuarded(
+        context,
+        () => ref.read(hostServingProvider.notifier).resetAllData(),
+        successMessage: 'All data cleared. Set the device up again.',
+      );
+    }
   }
 
   Widget _section(String label) => Padding(
         padding: const EdgeInsets.only(top: NbSpace.lg, bottom: NbSpace.sm),
         child: Text(label.toUpperCase(), style: NbType.heading),
       );
+}
+
+/// Type-to-confirm guard for the destructive data reset.
+class _ResetConfirmDialog extends StatefulWidget {
+  const _ResetConfirmDialog();
+
+  @override
+  State<_ResetConfirmDialog> createState() => _ResetConfirmDialogState();
+}
+
+class _ResetConfirmDialogState extends State<_ResetConfirmDialog> {
+  final _field = TextEditingController();
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final armed = _field.text.trim() == 'RESET';
+    return AlertDialog(
+      title: const Text('Reset all data?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('This cannot be undone. Type RESET to confirm.'),
+          const SizedBox(height: NbSpace.sm),
+          TextField(
+            controller: _field,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'RESET'),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel')),
+        TextButton(
+          onPressed: armed ? () => Navigator.pop(context, true) : null,
+          child: const Text('Delete everything'),
+        ),
+      ],
+    );
+  }
 }

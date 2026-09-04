@@ -8,6 +8,7 @@ import '../ui/auth/login_screen.dart';
 import '../ui/client/discover_screen.dart';
 import '../ui/counter/counter_home.dart';
 import '../ui/scanner/scanner_screen.dart';
+import '../ui/shared_widgets/brand_splash.dart';
 import '../ui/shared_widgets/nb_button.dart';
 import '../ui/shared_widgets/nb_feedback.dart';
 import '../ui/shared_widgets/nb_surface.dart';
@@ -34,7 +35,7 @@ class ModeGate extends ConsumerWidget {
       ref.watch(hostWakelockProvider); // keep the screen awake while serving
       final container = ref.watch(hostContainerProvider);
       return container.when(
-        loading: () => const _Splash('Preparing database…'),
+        loading: () => const BrandSplash(message: 'Preparing database…'),
         error: (e, _) => Scaffold(
           body: Center(child: ErrorPanel(error: e)),
         ),
@@ -63,25 +64,6 @@ class ModeGate extends ConsumerWidget {
       };
 }
 
-class _Splash extends StatelessWidget {
-  const _Splash(this.message);
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(color: NbColors.ink),
-              const SizedBox(height: NbSpace.md),
-              Text(message, style: NbType.body),
-            ],
-          ),
-        ),
-      );
-}
-
 class _ModePicker extends ConsumerWidget {
   const _ModePicker();
 
@@ -102,9 +84,21 @@ class _ModePicker extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Set up this device', style: NbType.display),
+                  Row(
+                    children: [
+                      Image.asset('assets/icon/icon_foreground.png',
+                          width: 48, height: 48),
+                      const SizedBox(width: NbSpace.sm),
+                      Text('TIFFIN',
+                          style: NbType.display.copyWith(letterSpacing: 2)),
+                    ],
+                  ),
+                  const SizedBox(height: NbSpace.lg),
+                  const Text('Set up this device', style: NbType.heading),
                   const SizedBox(height: NbSpace.sm),
-                  const Text('One app, two roles. You can change this later.',
+                  const Text(
+                      'One app, two roles. You can change this later '
+                      'from Settings — your data stays put.',
                       style: NbType.body),
                   const SizedBox(height: NbSpace.xl),
                   _ModeCard(

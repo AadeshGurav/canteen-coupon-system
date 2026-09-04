@@ -88,6 +88,8 @@ dev_dependencies:
   riverpod_generator: ^4.0.8
   # App-icon generator (build tooling only). Source art in assets/icon/.
   flutter_launcher_icons: ^0.14.4
+  # Native launch screen. Regenerate: dart run flutter_native_splash:create
+  flutter_native_splash: ^2.4.3
   # custom_lint / riverpod_lint are intentionally omitted: at these versions
   # their analyzer_plugin constraints don't co-resolve (riverpod_lint 3.1.8
   # wants ^0.14, the current custom_lint wants ^0.13). They're lint-only dev
@@ -99,6 +101,7 @@ flutter:
   generate: true
   assets:
     - assets/web_admin/
+    - assets/icon/icon_foreground.png
 
 # App icon — neobrutalism coupon/ticket stub. Regenerate after editing the
 # source art:  dart run flutter_launcher_icons
@@ -109,3 +112,14 @@ flutter_launcher_icons:
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
   ios: true
   remove_alpha_ios: true
+
+# Native launch screen — the ticket mark on the warm ground, matching the
+# in-app landing. Regenerate:  dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#F5F1E8"
+  image: "assets/icon/icon_foreground.png"
+  android_12:
+    color: "#F5F1E8"
+    image: "assets/icon/icon_foreground.png"
+  ios: true
+  android: true

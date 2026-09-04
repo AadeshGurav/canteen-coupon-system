@@ -114,6 +114,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           branding.asData?.value ?? 'Tiffin',
                           style: NbType.heading,
                         ),
+                        if (isHost)
+                          const Text('Host device', style: NbType.label),
                         const SizedBox(height: NbSpace.xs),
                         const Text('Sign in', style: NbType.body),
                         const SizedBox(height: NbSpace.lg),
@@ -142,6 +144,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: NbSpace.md),
+                  TextButton.icon(
+                    icon: const Icon(Icons.swap_horiz, size: 18),
+                    label: const Text('Switch device role'),
+                    onPressed: () =>
+                        ref.read(currentModeProvider.notifier).clear(),
                   ),
                 ],
               ),

@@ -168,6 +168,22 @@ void main() {
     expect(res.json['outcome'], 'rejected_unknown_code');
   });
 
+  test('wipeAllData clears every table and re-seeds settings', () async {
+    await _send(http, 'POST', '$base/api/members',
+        token: adminToken,
+        body: {'type': 'staff', 'name': 'Temp', 'staffId': 'T9'});
+    expect((await db.select(db.members).get()), isNotEmpty);
+    expect((await db.select(db.users).get()), isNotEmpty);
+
+    await db.wipeAllData();
+
+    expect((await db.select(db.members).get()), isEmpty);
+    expect((await db.select(db.users).get()), isEmpty);
+    expect((await db.select(db.sessions).get()), isEmpty);
+    // settings singleton row survives (re-seeded)
+    expect((await db.select(db.appSettings).get()).length, 1);
+  });
+
   test('with a cert: plain HTTP on the port, HTTPS on port+1, both serve',
       () async {
     final tls = SelfSignedTls(tmp.path);

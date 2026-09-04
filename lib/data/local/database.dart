@@ -44,14 +44,26 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
-          // The settings row always exists (PRD §6.8). Seeded here so every
-          // read is a plain lookup, never a "create-if-missing" branch.
-          await into(appSettings).insert(
-            const AppSettingsCompanion(id: Value(0)),
-            mode: InsertMode.insertOrIgnore,
-          );
+          await _seedSettingsRow();
         },
       );
+
+  Future<void> _seedSettingsRow() => into(appSettings).insert(
+        const AppSettingsCompanion(id: Value(0)),
+        mode: InsertMode.insertOrIgnore,
+      );
+
+  /// Deletes every row and re-seeds the settings singleton — a fresh install
+  /// without a reinstall. Host-admin "reset all data" only; destructive, so
+  /// it's gated behind a typed confirmation in the UI (CLAUDE.md §18.2).
+  Future<void> wipeAllData() async {
+    await transaction(() async {
+      for (final table in allTables) {
+        await delete(table).go();
+      }
+      await _seedSettingsRow();
+    });
+  }
 }
 
 LazyDatabase _openConnection() {

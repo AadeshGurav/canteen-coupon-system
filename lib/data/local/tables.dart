@@ -292,8 +292,7 @@ class AppSettings extends Table {
   RealColumn get brunchPrice => real().withDefault(const Constant(0))();
 
   /// Branding shown in the app bar / tab title (PRD §6.8).
-  TextColumn get appName =>
-      text().withDefault(const Constant('Tiffin'))();
+  TextColumn get appName => text().withDefault(const Constant('Tiffin'))();
 
   IntColumn get prepLeadMinutes => integer().withDefault(const Constant(60))();
   IntColumn get purchaseLeadDays => integer().withDefault(const Constant(1))();

@@ -39,9 +39,14 @@ class ModeController extends Notifier<AppMode?> {
     state = mode;
   }
 
+  /// Back to the mode picker. This is a *role* change, not a data reset — the
+  /// host's SQLite file is untouched, so a device can flip host↔client and
+  /// keep everything. Only [wipeAllData] clears the database.
   Future<void> clear() async {
+    if (state == AppMode.host) {
+      await ref.read(hostServingProvider.notifier).stop();
+    }
     await ref.read(appModeStoreProvider).clear();
-    // Drop any host/client resources and session tied to the old mode.
     ref.invalidate(sessionProvider);
     ref.invalidate(selectedHostProvider);
     state = null;
@@ -270,6 +275,18 @@ class HostServingController extends Notifier<HostServingState> {
   Future<void> restart() async {
     await stop();
     await start();
+  }
+
+  /// Wipes the whole database and returns the device to first-run setup — the
+  /// only thing that clears data (a role change never does). Destructive;
+  /// gated behind a typed confirmation in the UI.
+  Future<void> resetAllData() async {
+    await stop();
+    await ref.read(hostDatabaseProvider).wipeAllData();
+    ref.read(generatedAdminPasswordProvider.notifier).state = null;
+    ref.invalidate(hostContainerProvider); // re-bootstrap → new first-run admin
+    ref.invalidate(sessionProvider);
+    await ref.read(currentModeProvider.notifier).clear();
   }
 
   Future<void> generateCert() async {
