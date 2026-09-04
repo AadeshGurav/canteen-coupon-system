@@ -245,6 +245,28 @@ class _HostConsoleScreenState extends ConsumerState<HostConsoleScreen> {
                 ],
               ),
             ),
+            if (running) ...[
+              const SizedBox(height: NbSpace.md),
+              NbSurface(
+                intensity: NbIntensity.full,
+                background: NbColors.warn,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('KEEP THIS PHONE AWAKE',
+                        style: NbType.label.copyWith(color: NbColors.onWarn)),
+                    const SizedBox(height: NbSpace.xs),
+                    Text(
+                      'Leave the app open and on screen while you host. We are '
+                      'holding the display awake for you, but locking the phone '
+                      'or switching apps pauses the server — on iOS it stops '
+                      'entirely — and every client drops. Keep it on power too.',
+                      style: NbType.body.copyWith(color: NbColors.onWarn),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: NbSpace.md),
             NbSurface(
               child: Column(

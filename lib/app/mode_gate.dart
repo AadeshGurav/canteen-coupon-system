@@ -31,6 +31,7 @@ class ModeGate extends ConsumerWidget {
     final session = ref.watch(sessionProvider);
 
     if (mode == AppMode.host) {
+      ref.watch(hostWakelockProvider); // keep the screen awake while serving
       final container = ref.watch(hostContainerProvider);
       return container.when(
         loading: () => const _Splash('Preparing database…'),

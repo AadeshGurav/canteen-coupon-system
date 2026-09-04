@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../core/app_mode.dart';
 import '../core/config.dart';
@@ -139,6 +140,19 @@ final lanUrlsProvider = FutureProvider.autoDispose<LanUrls>((ref) async {
 
 /// True once the operator has started the server from the host console.
 final hostRunningProvider = StateProvider<bool>((_) => false);
+
+/// Holds the screen awake for as long as the host server is running (PRD §13.3).
+///
+/// Watched from [ModeGate] in host mode rather than the host console — the
+/// console is disposed once the host device signs in, but the server keeps
+/// running underneath it. On Android this pins the display; on iOS it disables
+/// the idle timer (the only lever the platform gives — it cannot keep a
+/// backgrounded app alive).
+final hostWakelockProvider = Provider<void>((ref) {
+  final running = ref.watch(hostRunningProvider);
+  WakelockPlus.toggle(enable: running);
+  ref.onDispose(() => WakelockPlus.disable());
+});
 
 // ===========================================================================
 // Client mode

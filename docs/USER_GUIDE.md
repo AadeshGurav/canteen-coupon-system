@@ -78,6 +78,11 @@ runs a foreground service so Android doesn't kill it mid-shift. Allow the
 notification permission when asked. Keep the phone on power and on Wi-Fi;
 don't "force stop" the app.
 
+The app also keeps the screen from timing out while the server is running, and
+the host console shows a **KEEP THIS PHONE AWAKE** reminder. Leave the app open
+and in the foreground: locking the phone or switching apps pauses the server
+(on iOS it stops entirely) and every client drops.
+
 ---
 
 ## 3. Daily use
