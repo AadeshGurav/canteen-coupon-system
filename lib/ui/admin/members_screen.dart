@@ -10,6 +10,7 @@ import '../shared_widgets/nb_feedback.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../shared_widgets/nb_text_field.dart';
 import '../theme/tokens.dart';
+import '../shared_widgets/motion.dart';
 
 final _membersProvider = FutureProvider.autoDispose<List<Member>>((ref) async {
   return ref.watch(backendProvider).listMembers();
@@ -59,7 +60,7 @@ class MembersScreen extends ConsumerWidget {
   static Future<void> _openForm(
       BuildContext context, WidgetRef ref, Member? existing) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => _MemberForm(existing: existing)),
+      tiffinRoute<bool>(context, () => _MemberForm(existing: existing)),
     );
     if (saved ?? false) ref.invalidate(_membersProvider);
   }

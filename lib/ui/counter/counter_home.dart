@@ -8,6 +8,7 @@ import '../scanner/scanner_screen.dart';
 import '../shared_widgets/app_shell.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../theme/tokens.dart';
+import '../shared_widgets/motion.dart';
 
 /// Counter-role home (PRD §4): scan, top-ups & billing, and the shared
 /// purchase schedule — nothing else.
@@ -38,9 +39,8 @@ class CounterHome extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: NbSpace.md),
               child: NbSurface(
                 intensity: NbIntensity.full,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => build()),
-                ),
+                onTap: () => Navigator.of(context)
+                    .push(tiffinRoute<void>(context, () => build())),
                 child: Row(
                   children: [
                     Icon(icon, size: 32, color: t.color.ink),

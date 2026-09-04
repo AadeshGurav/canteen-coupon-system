@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../core/app_mode.dart';
 import '../scanner/scanner_screen.dart';
 import '../shared_widgets/app_shell.dart';
+import '../shared_widgets/motion.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../theme/tokens.dart';
 import 'expenses_screen.dart';
@@ -67,9 +68,8 @@ class AdminDashboard extends ConsumerWidget {
             () => const HostingScreen()),
     ];
 
-    void openHosting() => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const HostingScreen()),
-        );
+    void openHosting() => Navigator.of(context)
+        .push(tiffinRoute<void>(context, () => const HostingScreen()));
 
     return Scaffold(
       appBar: NbAppBar(title: 'Admin · $username'),
@@ -106,21 +106,24 @@ class AdminDashboard extends ConsumerWidget {
               crossAxisSpacing: NbSpace.md,
               childAspectRatio: 1.3,
               children: [
-                for (final d in destinations)
-                  NbSurface(
-                    tone: d.tone,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => d.build()),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(d.icon,
-                            size: 36, color: t.color.on(t.color.tone(d.tone))),
-                        const SizedBox(height: NbSpace.sm),
-                        Text(d.label,
-                            textAlign: TextAlign.center, style: t.text.label),
-                      ],
+                for (final (i, d) in destinations.indexed)
+                  Entrance(
+                    index: i,
+                    child: NbSurface(
+                      tone: d.tone,
+                      onTap: () => Navigator.of(context)
+                          .push(tiffinRoute<void>(context, () => d.build())),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(d.icon,
+                              size: 36,
+                              color: t.color.on(t.color.tone(d.tone))),
+                          const SizedBox(height: NbSpace.sm),
+                          Text(d.label,
+                              textAlign: TextAlign.center, style: t.text.label),
+                        ],
+                      ),
                     ),
                   ),
               ],

@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../core/errors.dart';
 import '../../domain/ledger.dart';
 import '../shared_widgets/app_shell.dart';
+import '../shared_widgets/motion.dart';
 import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../theme/tokens.dart';
@@ -111,7 +112,18 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
             Center(
               child: CircularProgressIndicator(color: t.color.surface),
             ),
-          if (_result != null) _ResultOverlay(result: _result!, onNext: _clear),
+          // The verdict is the peak moment of the whole app (Peak-End,
+          // §11.2), so it pops rather than appears. The camera itself stays
+          // still — it is a live preview under a performance budget.
+          if (_result != null)
+            MotionSwitcher(
+              scaleIn: true,
+              child: _ResultOverlay(
+                key: ValueKey(_result!.outcome),
+                result: _result!,
+                onNext: _clear,
+              ),
+            ),
           if (_errorMessage != null)
             _MessageOverlay(
               title: 'SCAN ERROR',
@@ -145,7 +157,7 @@ class _ReticleOverlay extends StatelessWidget {
 }
 
 class _ResultOverlay extends StatelessWidget {
-  const _ResultOverlay({required this.result, required this.onNext});
+  const _ResultOverlay({super.key, required this.result, required this.onNext});
 
   final ScanResult result;
   final VoidCallback onNext;

@@ -13,6 +13,7 @@ import '../shared_widgets/nb_text_field.dart';
 import '../settings/appearance_screen.dart';
 import '../theme/tokens.dart';
 import 'hosting_screen.dart';
+import '../shared_widgets/motion.dart';
 
 final _settingsProvider = FutureProvider.autoDispose<SettingsSnapshot>(
     (ref) => ref.watch(backendProvider).getSettings());
@@ -115,9 +116,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       children: [
         if (isHost) ...[
           NbSurface(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const HostingScreen()),
-            ),
+            onTap: () => Navigator.of(context)
+                .push(tiffinRoute<void>(context, () => const HostingScreen())),
             child: Row(
               children: [
                 Icon(serving ? Icons.wifi_tethering : Icons.wifi_off,
@@ -236,8 +236,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                 label: 'Appearance',
                 icon: Icons.palette_outlined,
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                      builder: (_) => const AppearanceScreen()),
+                  tiffinRoute<void>(context, () => const AppearanceScreen()),
                 ),
               ),
               const SizedBox(height: NbSpace.sm),

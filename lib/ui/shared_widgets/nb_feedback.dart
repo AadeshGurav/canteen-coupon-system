@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors.dart';
 import '../theme/tokens.dart';
+import 'motion.dart';
 import 'nb_button.dart';
 import 'nb_surface.dart';
 
@@ -43,16 +44,24 @@ class AsyncView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return value.when(
-      loading: () => NbLoading(label: loadingLabel),
-      error: (error, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(NbSpace.lg),
-          child: ErrorPanel(error: error, onRetry: onRetry),
+    // Cross-faded so a list doesn't replace its spinner with a jump cut. The
+    // key is what tells AnimatedSwitcher these are different states.
+    return MotionSwitcher(
+      child: value.when(
+        loading: () =>
+            NbLoading(key: const ValueKey('loading'), label: loadingLabel),
+        error: (error, _) => Center(
+          key: const ValueKey('error'),
+          child: Padding(
+            padding: const EdgeInsets.all(NbSpace.lg),
+            child: ErrorPanel(error: error, onRetry: onRetry),
+          ),
+        ),
+        data: (data) => KeyedSubtree(
+          key: const ValueKey('data'),
+          child: (empty != null && _emptyCheck(data)) ? empty! : builder(data),
         ),
       ),
-      data: (data) =>
-          (empty != null && _emptyCheck(data)) ? empty! : builder(data),
     );
   }
 }

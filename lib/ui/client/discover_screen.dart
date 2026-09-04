@@ -10,6 +10,7 @@ import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_feedback.dart';
 import '../shared_widgets/nb_surface.dart';
 import '../theme/tokens.dart';
+import '../shared_widgets/motion.dart';
 
 /// Client mode: pick a host found on the LAN (PRD §13.5) — recognition over
 /// recall (CLAUDE.md §11.1 #6). Auto-discovery is the happy path; a manual
@@ -21,9 +22,8 @@ class DiscoverScreen extends ConsumerWidget {
 
   void _connect(BuildContext context, WidgetRef ref, DiscoveredHost host) {
     ref.read(selectedHostProvider.notifier).state = host;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(context)
+        .push(tiffinRoute<void>(context, () => const LoginScreen()));
   }
 
   Future<void> _enterManually(BuildContext context, WidgetRef ref,

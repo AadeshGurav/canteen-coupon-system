@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'motion.dart';
 
 /// A bordered, shadowed block — the base primitive for cards, panels and the
 /// scan result state (PRD §14). [intensity] picks border/shadow weight so no
@@ -56,6 +57,6 @@ class NbSurface extends StatelessWidget {
       ),
     );
     if (onTap == null) return block;
-    return GestureDetector(onTap: onTap, child: block);
+    return PressEffect(onTap: onTap, child: block);
   }
 }

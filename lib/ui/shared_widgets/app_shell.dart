@@ -7,6 +7,7 @@ import '../settings/appearance_screen.dart';
 import '../theme/tokens.dart';
 import 'frosted_panel.dart';
 import 'nb_feedback.dart';
+import 'motion.dart';
 
 enum _ShellAction { appearance, signOut }
 
@@ -38,8 +39,7 @@ class NbAppBar extends ConsumerWidget implements PreferredSizeWidget {
           tooltip: 'More',
           onSelected: (action) => switch (action) {
             _ShellAction.appearance => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                    builder: (_) => const AppearanceScreen()),
+                tiffinRoute<void>(context, () => const AppearanceScreen()),
               ),
             _ShellAction.signOut => ref.read(sessionProvider.notifier).logout(),
           },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'motion.dart';
 
 /// Primary/secondary action button. A full-intensity primary is reserved for
 /// the one action that matters most on a screen (PRD §14.2, Von Restorff);
@@ -55,7 +56,7 @@ class NbButton extends StatelessWidget {
       button: true,
       enabled: !disabled,
       label: label,
-      child: GestureDetector(
+      child: PressEffect(
         onTap: disabled ? null : onPressed,
         child: Opacity(
           opacity: disabled ? 0.5 : 1,
