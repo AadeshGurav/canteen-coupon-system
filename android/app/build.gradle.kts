@@ -47,3 +47,10 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // ContextCompat / ActivityCompat for the hotspot MethodChannel permission
+    // flow. Present transitively via the Flutter embedding, but declared so the
+    // import is explicit (CLAUDE.md §10).
+    implementation("androidx.core:core-ktx:1.13.1")
+}

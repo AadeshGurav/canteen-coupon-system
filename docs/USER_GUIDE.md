@@ -84,7 +84,17 @@ Phones always use the HTTP port, so a cert never affects phone-to-phone use.
 The HTTPS URL still shows a browser "not trusted" warning the first time each
 computer connects — only a real CA removes that.
 
-### 2.5 Keeping the host awake
+### 2.5 No Wi-Fi? Serve from the host's own hotspot (Android)
+
+Under **Admin ▸ Hosting & LAN**, **Start hotspot** makes the Android host
+broadcast its own private Wi-Fi — no router, no internet. It shows the
+network name, password, and a QR the other phones can scan to join. Once
+they're on it, they pick the host from the list, or use **Connect by IP →
+192.168.49.1**. Starting the hotspot turns this phone's normal Wi-Fi off
+while it's running. (iPhone can't do this — use its built-in Personal
+Hotspot from iOS Settings instead.)
+
+### 2.6 Keeping the host awake
 
 While serving, the app keeps the screen from timing out.
 

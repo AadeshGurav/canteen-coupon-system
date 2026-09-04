@@ -6,6 +6,15 @@
     <!-- mDNS / NSD host discovery (PRD §13.5) needs multicast. -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
 
+    <!-- Offline hotspot mode: host a router-less Wi-Fi via startLocalOnlyHotspot.
+         NEARBY_WIFI_DEVICES on 33+, FINE_LOCATION on 26-32 (that API gated it
+         behind location back then). neverForLocation: we only need the AP, not
+         the user's position. -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+
     <!-- Native QR scan point (PRD §6.4, §13.6). -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>

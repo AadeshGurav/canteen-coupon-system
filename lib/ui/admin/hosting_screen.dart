@@ -1,13 +1,17 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../app/providers.dart';
+import '../../discovery/hotspot.dart';
 import '../shared_widgets/copyable_url.dart';
 import '../shared_widgets/ios_host_advisory.dart';
 import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_surface.dart';
+import '../shared_widgets/nb_feedback.dart';
 import '../theme/tokens.dart';
 
 /// Admin ▸ Hosting — the LAN server controls that used to live on a pre-login
@@ -140,6 +144,12 @@ class HostingScreen extends ConsumerWidget {
                 ),
           if (running) const SizedBox(height: NbSpace.md),
 
+          // Offline hotspot (Android) ----------------------------------
+          if (ref.watch(hotspotProvider).supported) ...[
+            const _HotspotCard(),
+            const SizedBox(height: NbSpace.md),
+          ],
+
           // Keep awake -------------------------------------------------
           NbSurface(
             child: Column(
@@ -194,4 +204,102 @@ class HostingScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// "Serve without Wi-Fi" — the host device broadcasts its own network via
+/// Android's local-only hotspot. Other phones join it (SSID + passphrase, or
+/// the QR) and reach the host at 192.168.49.1.
+class _HotspotCard extends ConsumerWidget {
+  const _HotspotCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hs = ref.watch(hotspotProvider);
+    final ctrl = ref.read(hotspotProvider.notifier);
+    final info = hs.info;
+
+    return NbSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('SERVE WITHOUT WI-FI (HOTSPOT)', style: NbType.label),
+          const SizedBox(height: NbSpace.xs),
+          if (info == null) ...[
+            const Text(
+              'No Wi-Fi at the canteen? This phone makes its own private '
+              'network. It turns Wi-Fi off on this device while active, and '
+              'has no internet — just the canteen app.',
+              style: NbType.body,
+            ),
+            if (hs.error != null) ...[
+              const SizedBox(height: NbSpace.xs),
+              Text(hs.error!,
+                  style: NbType.body.copyWith(color: NbColors.reject)),
+            ],
+            const SizedBox(height: NbSpace.md),
+            NbButton.secondary(
+              label: 'Start hotspot',
+              icon: Icons.wifi_tethering,
+              busy: hs.busy,
+              onPressed: hs.busy
+                  ? null
+                  : () async {
+                      await ctrl.start();
+                      ref.invalidate(lanUrlsProvider);
+                    },
+            ),
+          ] else ...[
+            _kv(context, 'Network', info.ssid),
+            _kv(context, 'Password', info.passphrase),
+            _kv(context, 'Host address', '${info.host}:8710'),
+            const SizedBox(height: NbSpace.sm),
+            const Text(
+                'Other phones: scan to join, then open the app and '
+                'pick this host (or Connect by IP → ${'192.168.49.1'}).',
+                style: NbType.body),
+            const SizedBox(height: NbSpace.sm),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(NbSpace.sm),
+                color: NbColors.surface,
+                child: QrImageView(
+                  data: info.joinQr,
+                  size: 180,
+                  backgroundColor: NbColors.surface,
+                ),
+              ),
+            ),
+            const SizedBox(height: NbSpace.md),
+            NbButton(
+              label: 'Stop hotspot',
+              icon: Icons.stop,
+              background: NbColors.reject,
+              foreground: NbColors.onReject,
+              busy: hs.busy,
+              onPressed: hs.busy ? null : ctrl.stop,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _kv(BuildContext context, String k, String v) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: NbSpace.xs),
+        child: Row(
+          children: [
+            SizedBox(width: 120, child: Text(k, style: NbType.label)),
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: v));
+                  if (context.mounted) showNbSnack(context, 'Copied "$v".');
+                },
+                child: Text(v,
+                    style: NbType.body.copyWith(fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      );
 }

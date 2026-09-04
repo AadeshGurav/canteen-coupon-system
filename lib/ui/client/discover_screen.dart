@@ -26,10 +26,11 @@ class DiscoverScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _enterManually(BuildContext context, WidgetRef ref) async {
+  Future<void> _enterManually(BuildContext context, WidgetRef ref,
+      {String? initialIp}) async {
     final host = await showDialog<DiscoveredHost>(
       context: context,
-      builder: (_) => const _ManualHostDialog(),
+      builder: (_) => _ManualHostDialog(initialIp: initialIp),
     );
     if (host != null && context.mounted) _connect(context, ref, host);
   }
@@ -120,6 +121,13 @@ class DiscoverScreen extends ConsumerWidget {
               icon: Icons.keyboard,
               onPressed: () => _enterManually(context, ref),
             ),
+            const SizedBox(height: NbSpace.sm),
+            NbButton.secondary(
+              label: "On the host's hotspot",
+              icon: Icons.wifi_tethering,
+              onPressed: () =>
+                  _enterManually(context, ref, initialIp: '192.168.49.1'),
+            ),
           ],
         ),
       ),
@@ -130,14 +138,16 @@ class DiscoverScreen extends ConsumerWidget {
 /// Fallback when mDNS can't cross the network: type the host's IP (shown on the
 /// host device under Admin ▸ Hosting) and port.
 class _ManualHostDialog extends StatefulWidget {
-  const _ManualHostDialog();
+  const _ManualHostDialog({this.initialIp});
+
+  final String? initialIp;
 
   @override
   State<_ManualHostDialog> createState() => _ManualHostDialogState();
 }
 
 class _ManualHostDialogState extends State<_ManualHostDialog> {
-  final _ip = TextEditingController();
+  late final _ip = TextEditingController(text: widget.initialIp ?? '');
   final _port = TextEditingController(text: '${AppConfig.defaultServerPort}');
   String? _error;
 
