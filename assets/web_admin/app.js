@@ -139,7 +139,13 @@ const store = {
   bust() { this.settings = this.categories = this.ingredients = null; },
 };
 
-const ymd = (d) => d.toISOString().slice(0, 10);
+// Local calendar date (not UTC) — `toISOString` would roll the day over for
+// users east/west of UTC. Menu entry dates from the API are already local
+// `yyyy-mm-dd`, so the grid must compare against a local "today" too.
+const ymd = (d) => {
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
 const fmtDate = (s) => new Date(s).toLocaleString();
 const fmtDay = (s) => new Date(s).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
@@ -147,12 +153,18 @@ const fmtDay = (s) => new Date(s).toLocaleDateString(undefined, { weekday: 'shor
 const views = {};
 
 views.login = async () => {
-  const branding = await api.get('/settings/branding').catch(() => ({ appName: 'Canteen Coupon System' }));
+  const branding = await api.get('/settings/branding').catch(() => ({ appName: 'Tiffin' }));
   const u = h('input', { autofocus: true });
   const p = h('input', { type: 'password' });
   const err = h('div', { class: 'muted', style: 'color:var(--reject)' });
+  const btn = h('button', { class: 'primary', onclick: () => submit() }, 'Sign in');
+  let busy = false;
   const submit = async () => {
+    if (busy) return;
     err.textContent = '';
+    busy = true;
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
     try {
       const s = await api.post('/auth/login', { username: u.value.trim(), password: p.value });
       if (s.role !== 'admin' && s.role !== 'counter') {
@@ -163,9 +175,17 @@ views.login = async () => {
       localStorage.setItem('canteen_role', s.role);
       localStorage.setItem('canteen_user', s.username);
       location.hash = '#/members';
-    } catch (e) { err.textContent = e.message; }
+    } catch (e) {
+      err.textContent = e.message;
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
   };
-  p.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  for (const el of [u, p]) {
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  }
   return h('div', { class: 'login-wrap' },
     h('div', { class: 'card login-card' },
       h('h1', { text: branding.appName }),
@@ -173,7 +193,7 @@ views.login = async () => {
       h('label', {}, 'Username'), u,
       h('label', {}, 'Password'), p,
       err,
-      h('div', { style: 'margin-top:16px' }, h('button', { class: 'primary', onclick: submit }, 'Sign in'))));
+      h('div', { style: 'margin-top:16px' }, btn)));
 };
 
 // generic resource table with add/edit/delete via a field spec
@@ -228,12 +248,9 @@ function crudView({ title, path, columns, fields, toBody, canDelete = true, extr
 
 // members ------------------------------------------------------------------
 views.members = async () => {
-  const members = await api.get('/members');
-  const settings = await store.ensureSettings();
-  if (!members.length) return h('div', {},
-    h('h1', {}, 'Members'),
-    emptyState('members', 'No members yet', '+ New member', () => openForm(null)));
-
+  const [members, settings] = await Promise.all([
+    api.get('/members'), store.ensureSettings(),
+  ]);
 
   const openForm = (m) => {
     const type = h('select', {}, h('option', { value: 'student' }, 'Student'), h('option', { value: 'staff' }, 'Staff'));
@@ -298,9 +315,16 @@ views.members = async () => {
       h('div', { class: 'muted' }, m.qrCodeId)), { okLabel: 'Close', onOk: () => { URL.revokeObjectURL(url); } });
   };
 
-  return h('div', {},
-    h('div', { class: 'row between' }, h('h1', {}, `Members (${members.length})`),
-      h('button', { class: 'primary', onclick: () => openForm(null) }, '+ New member')),
+  const header = h('div', { class: 'row between' },
+    h('h1', {}, members.length ? `Members (${members.length})` : 'Members'),
+    h('button', { class: 'primary', onclick: () => openForm(null) }, '+ New member'));
+
+  if (!members.length) {
+    return h('div', {}, header,
+      emptyState('members', 'No members yet', '+ New member', () => openForm(null)));
+  }
+
+  return h('div', {}, header,
     h('table', {},
       h('thead', {}, h('tr', {}, ...['Name', 'Type', 'Detail', 'Lunch', 'Bfast', 'Brunch', 'Status', ''].map((t) => h('th', { text: t })))),
       h('tbody', {}, ...members.map((m) => h('tr', {},
@@ -420,16 +444,27 @@ views.scans = async () => {
 };
 
 // menu calendar ------------------------------------------------------
+// Month grid + day panel, matching the mobile app (lib/ui/admin/menu_screen.dart).
+// Selected month/day survive a re-render (they live outside the view fn).
+const MEAL_COLOR = { breakfast: 'var(--warn)', lunch: 'var(--accent)', brunch: 'var(--accept)' };
+const menuState = {
+  month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  day: ymd(new Date()),
+};
+
 views.menu = async () => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const m = menuState.month;
+  const monthStart = new Date(m.getFullYear(), m.getMonth(), 1);
+  const monthEnd = new Date(m.getFullYear(), m.getMonth() + 1, 0);
   const [entries, cats] = await Promise.all([
-    api.get(`/menu?start=${ymd(start)}&end=${ymd(end)}`), store.ensureCategories(),
+    api.get(`/menu?start=${ymd(monthStart)}&end=${ymd(monthEnd)}`), store.ensureCategories(),
   ]);
-  const open = () => {
-    const date = h('input', { type: 'date', value: ymd(now) });
-    const meal = h('select', {}, ...['breakfast', 'lunch', 'brunch'].map((m) => h('option', { value: m }, m)));
+  const byDay = {};
+  for (const e of entries) (byDay[e.date] ??= []).push(e);
+
+  const addEntry = (dateStr) => {
+    const date = h('input', { type: 'date', value: dateStr });
+    const meal = h('select', {}, ...['breakfast', 'lunch', 'brunch'].map((x) => h('option', { value: x }, x)));
     const catBox = h('div', { class: 'row' }, ...cats.map((c) => {
       const cb = h('input', { type: 'checkbox', value: c.name, style: 'width:auto' });
       return h('label', { style: 'display:flex;gap:4px;align-items:center;text-transform:none' }, cb, c.name);
@@ -444,27 +479,63 @@ views.menu = async () => {
           date: date.value, mealType: meal.value, categories: chosen,
           items: items.value.split(',').map((s) => s.trim()).filter(Boolean),
         }), 'Entry added.');
-        if (ok) render();
+        if (ok) { menuState.day = date.value; render(); }
         return ok;
       },
     });
   };
-  const byDay = {};
-  for (const e of entries) (byDay[e.date] ??= []).push(e);
-  if (!entries.length) return h('div', {},
-    h('div', { class: 'row between' }, h('h1', {}, start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })), h('button', { class: 'primary', onclick: open }, '+ Add entry')),
-    emptyState('menu', 'Nothing planned this month', '+ Add entry', open));
+  const stepMonth = (delta) => {
+    menuState.month = new Date(m.getFullYear(), m.getMonth() + delta, 1);
+    render();
+  };
+
+  // grid: Monday-first, leading blanks for the first row
+  const leadingBlanks = (monthStart.getDay() + 6) % 7;
+  const todayStr = ymd(new Date());
+  const cells = [];
+  for (let i = 0; i < leadingBlanks; i++) cells.push(h('div', { class: 'cal-cell blank' }));
+  for (let d = 1; d <= monthEnd.getDate(); d++) {
+    const dateStr = ymd(new Date(m.getFullYear(), m.getMonth(), d));
+    const dayEntries = byDay[dateStr] || [];
+    const meals = [...new Set(dayEntries.map((e) => e.mealType))];
+    const cls = 'cal-cell'
+      + (dateStr === menuState.day ? ' selected' : '')
+      + (dateStr === todayStr ? ' today' : '');
+    cells.push(h('div', { class: cls, onclick: () => { menuState.day = dateStr; render(); } },
+      h('div', { class: 'cal-num' }, String(d)),
+      h('div', { class: 'cal-dots' }, ...meals.map((mt) =>
+        h('span', { class: 'cal-dot', style: `background:${MEAL_COLOR[mt] || 'var(--ink)'}` }))),
+      dayEntries.length ? h('div', { class: 'cal-count' }, String(dayEntries.length)) : null));
+  }
+
+  const selEntries = (byDay[menuState.day] || []).slice()
+    .sort((a, b) => a.mealType.localeCompare(b.mealType));
+  const panel = h('div', { class: 'card' },
+    h('div', { class: 'row between' },
+      h('h3', { style: 'margin:0', text: fmtDay(menuState.day) }),
+      h('button', { class: 'primary', onclick: () => addEntry(menuState.day) }, '+ Add')),
+    selEntries.length
+      ? h('div', {}, ...selEntries.map((e) => h('div', { class: 'row between', style: 'padding:6px 0;border-top:2px solid var(--surface-muted)' },
+          h('div', {},
+            h('span', { class: 'cal-dot', style: `background:${MEAL_COLOR[e.mealType] || 'var(--ink)'};margin-right:6px` }),
+            h('b', {}, e.mealType + ' '),
+            h('span', { class: 'muted' }, e.categories.join(', ')),
+            h('div', {}, e.items.join(', '))),
+          h('button', { class: 'ghost danger', onclick: async () => {
+            if (await guard(() => api.del(`/menu/${e.id}`), 'Removed.')) render();
+          } }, 'Del'))))
+      : h('div', { class: 'muted', style: 'margin-top:8px' }, 'Nothing planned for this day.'));
+
   return h('div', {},
-    h('div', { class: 'row between' }, h('h1', {}, start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })),
-      h('button', { class: 'primary', onclick: open }, '+ Add entry')),
-    ...Object.keys(byDay).sort().map((d) => h('div', { class: 'card' },
-      h('h3', { text: fmtDay(d) }),
-      ...byDay[d].map((e) => h('div', { class: 'row between' },
-        h('div', {}, h('b', {}, e.mealType + ' '), h('span', { class: 'muted' }, e.categories.join(', ')), h('div', {}, e.items.join(', '))),
-        h('button', { class: 'ghost danger', onclick: async () => {
-          if (await guard(() => api.del(`/menu/${e.id}`), 'Removed.')) render();
-        } }, 'Del'))))),
-    entries.length ? null : h('div', { class: 'muted' }, 'Nothing planned this month.'));
+    h('div', { class: 'row between' },
+      h('div', { class: 'row' },
+        h('button', { class: 'ghost', onclick: () => stepMonth(-1) }, '‹'),
+        h('h1', { style: 'margin:0', text: m.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) }),
+        h('button', { class: 'ghost', onclick: () => stepMonth(1) }, '›')),
+      h('button', { class: 'primary', onclick: () => addEntry(menuState.day) }, '+ Add entry')),
+    h('div', { class: 'cal-head' }, ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((w) => h('div', {}, w))),
+    h('div', { class: 'cal-grid' }, ...cells),
+    panel);
 };
 
 views.categories = crudView({
@@ -485,9 +556,6 @@ views.ingredients = crudView({
 views.recipes = async () => {
   const [recipes, ingredients] = await Promise.all([api.get('/recipes'), store.ensureIngredients()]);
   const nameById = Object.fromEntries(ingredients.map((i) => [i.id, i.name]));
-  if (!recipes.length) return h('div', {},
-    h('h1', {}, 'Recipes'),
-    emptyState('recipes', 'No recipes yet', '+ New recipe', () => open(null)));
 
   const open = (r) => {
     const dish = h('input', {}); dish.value = r?.dishName ?? '';
@@ -514,8 +582,13 @@ views.recipes = async () => {
       },
     });
   };
-  return h('div', {},
-    h('div', { class: 'row between' }, h('h1', {}, 'Recipes'), h('button', { class: 'primary', onclick: () => open(null) }, '+ New')),
+  const header = h('div', { class: 'row between' }, h('h1', {}, 'Recipes'),
+    h('button', { class: 'primary', onclick: () => open(null) }, '+ New'));
+  if (!recipes.length) {
+    return h('div', {}, header,
+      emptyState('recipes', 'No recipes yet', '+ New recipe', () => open(null)));
+  }
+  return h('div', {}, header,
     h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Dish'), h('th', {}, 'Ingredients'), h('th', {}, ''))),
       h('tbody', {}, ...recipes.map((r) => h('tr', {},
         h('td', { text: r.dishName }),
@@ -647,9 +720,6 @@ views.refunds = async () => {
 // users -------------------------------------------------------
 views.users = async () => {
   const users = await api.get('/users');
-  if (!users.length) return h('div', {},
-    h('h1', {}, 'Users'),
-    emptyState('users', 'No users yet', '+ New user', () => open(null)));
 
   const open = (u) => {
     const name = h('input', {}); name.value = u?.username ?? ''; if (u) name.disabled = true;
@@ -669,8 +739,13 @@ views.users = async () => {
       },
     });
   };
-  return h('div', {},
-    h('div', { class: 'row between' }, h('h1', {}, 'Users'), h('button', { class: 'primary', onclick: () => open(null) }, '+ New user')),
+  const header = h('div', { class: 'row between' }, h('h1', {}, 'Users'),
+    h('button', { class: 'primary', onclick: () => open(null) }, '+ New user'));
+  if (!users.length) {
+    return h('div', {}, header,
+      emptyState('users', 'No users yet', '+ New user', () => open(null)));
+  }
+  return h('div', {}, header,
     h('table', {}, h('thead', {}, h('tr', {}, ...['Username', 'Role', 'Status', ''].map((t) => h('th', { text: t })))),
       h('tbody', {}, ...users.map((u) => h('tr', {},
         h('td', { text: u.username }), h('td', { text: u.role }), h('td', { text: u.status }),
@@ -752,7 +827,7 @@ async function render() {
   const view = views[route] || views.members;
 
   const side = h('nav', { class: 'side' },
-    h('div', { class: 'brand' }, 'CANTEEN ADMIN'),
+    h('div', { class: 'brand' }, 'TIFFIN · ADMIN'),
     ...allowed.map(([k, label]) => h('a', { href: '#/' + k, class: route === k ? 'active' : '' }, label)),
     h('div', { class: 'spacer' }),
     h('div', { class: 'muted' }, localStorage.getItem('canteen_user') + ' · ' + role),
