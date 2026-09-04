@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -69,6 +69,11 @@ class AppDatabase extends _$AppDatabase {
               "UPDATE app_settings SET local_timezone = 'Asia/Kolkata' "
               "WHERE local_timezone = 'UTC'",
             );
+          },
+          from3To4: (m, schema) async {
+            // Empty by default; SettingsService fills it on first read, so an
+            // upgraded host keeps serving without a restart.
+            await m.addColumn(schema.appSettings, schema.appSettings.hostId);
           },
           from2To3: (m, schema) async {
             // Host-enforced appearance. Additive and defaulted off, so an

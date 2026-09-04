@@ -106,3 +106,37 @@ class AppearanceStore {
     await _prefs.setBool(_motionKey, appearance.motion);
   }
 }
+
+/// Everything a device learns about a host before anyone signs in: who it is,
+/// what it calls itself, and how it wants to look.
+///
+/// Fetched from the public endpoint, so the theme is already right on the
+/// login screen and saved logins can be matched to the host by [hostId]
+/// rather than by an address DHCP will change.
+class HostGreeting {
+  const HostGreeting({
+    required this.hostId,
+    required this.appName,
+    required this.appearance,
+  });
+
+  factory HostGreeting.fromWire(Map<String, dynamic> j) => HostGreeting(
+        hostId: j['hostId'] as String? ?? '',
+        appName: j['appName'] as String? ?? 'Tiffin',
+        appearance: AppearancePolicy.fromWire(j),
+      );
+
+  static const unknown = HostGreeting(
+    hostId: '',
+    appName: 'Tiffin',
+    appearance: AppearancePolicy.none,
+  );
+
+  final String hostId;
+  final String appName;
+  final AppearancePolicy appearance;
+
+  /// False against a host too old to report an id — saved logins then fall
+  /// back to being keyed by nothing, so we simply don't save them.
+  bool get isIdentified => hostId.isNotEmpty;
+}

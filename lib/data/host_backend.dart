@@ -56,8 +56,22 @@ class HostBackend implements Backend {
   Future<String> branding() => _c.settings.readAppName();
 
   @override
-  Future<AppearancePolicy> appearancePolicy() async =>
-      AppearancePolicy.fromWire(await _c.settings.readPublicAppearance());
+  Future<AuthSession?> resumeSession(String token) async {
+    try {
+      final session = await _c.auth.requireSession(token);
+      return AuthSession(
+        token: session.token,
+        username: session.username,
+        role: Role.fromWire(session.role),
+      );
+    } on AppException {
+      return null;
+    }
+  }
+
+  @override
+  Future<HostGreeting> greeting() async =>
+      HostGreeting.fromWire(await _c.settings.readPublicAppearance());
 
   @override
   Future<SettingsSnapshot> getSettings() => _c.settings.read();

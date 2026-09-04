@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/appearance_providers.dart';
 import '../../app/providers.dart';
+import '../../app/session_memory.dart';
 import '../../services/settings_service.dart';
 import '../shared_widgets/nb_button.dart';
 import '../shared_widgets/nb_feedback.dart';
@@ -99,6 +100,8 @@ class AppearanceScreen extends ConsumerWidget {
             'wins, whatever is chosen here.',
             style: t.text.body.copyWith(color: t.color.inkMuted),
           ),
+          const SizedBox(height: NbSpace.xl),
+          const _SavedLoginsCard(),
           if (isAdmin) ...[
             const SizedBox(height: NbSpace.xl),
             _EnforceCard(enforced: enforced, appearance: device),
@@ -230,6 +233,70 @@ class _EnforceCardState extends ConsumerState<_EnforceCard> {
               busy: _busy,
               onPressed: _busy ? null : () => _apply(enforce: true),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What this device has remembered, and the one control that clears it.
+///
+/// Lives here rather than in admin Settings because it is a property of the
+/// phone, and because scanner and counter roles have no Settings screen — they
+/// would otherwise have no way to clear a saved password.
+class _SavedLoginsCard extends ConsumerWidget {
+  const _SavedLoginsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final hosts = ref.watch(savedHostsProvider).asData?.value ?? const [];
+
+    return NbSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('SAVED LOGINS', style: t.text.label),
+          const SizedBox(height: NbSpace.xs),
+          if (hosts.isEmpty)
+            Text('Nothing saved on this device.',
+                style: t.text.body.copyWith(color: t.color.inkMuted))
+          else ...[
+            Text(
+              'This phone remembers who signs in on each canteen host, so it '
+              'can offer them next time. Passwords are kept only where you '
+              'asked for them.',
+              style: t.text.body,
+            ),
+            const SizedBox(height: NbSpace.sm),
+            for (final host in hosts)
+              Padding(
+                padding: const EdgeInsets.only(bottom: NbSpace.xs),
+                child: Row(
+                  children: [
+                    Icon(Icons.dns_outlined, size: 18, color: t.color.inkMuted),
+                    const SizedBox(width: NbSpace.sm),
+                    Expanded(
+                      child: Text(
+                        '${host.name} — '
+                        '${host.logins.map((l) => l.username).join(', ')}',
+                        style: t.text.body,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: NbSpace.sm),
+            NbButton.secondary(
+              label: 'Forget all saved logins',
+              icon: Icons.delete_outline,
+              onPressed: () => runGuarded(
+                context,
+                ref.read(sessionMemoryProvider).forgetEverything,
+                successMessage: 'Saved logins cleared.',
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -300,6 +300,11 @@ class AppSettings extends Table {
   IntColumn get prepLeadMinutes => integer().withDefault(const Constant(60))();
   IntColumn get purchaseLeadDays => integer().withDefault(const Constant(1))();
 
+  /// Stable identity for this host, generated on first read. Clients key
+  /// their saved logins on it because a LAN address is not stable — DHCP
+  /// hands out a different one and the same canteen looks like a new host.
+  TextColumn get hostId => text().withDefault(const Constant(''))();
+
   /// Appearance policy. Off by default: a device's theme is its own business
   /// until a site decides it wants one consistent look on every screen.
   BoolColumn get enforceAppearance =>

@@ -1,4 +1,5 @@
 import 'package:canteen_coupon/data/local/database.dart';
+import 'package:canteen_coupon/services/settings_service.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
@@ -15,7 +16,7 @@ void main() {
 
   setUpAll(() => verifier = SchemaVerifier(GeneratedHelper()));
 
-  const current = 3;
+  const current = 4;
 
   Future<String> timezoneOf(AppDatabase db) async =>
       (await db.select(db.appSettings).getSingle()).localTimezone;
@@ -39,7 +40,7 @@ void main() {
     return db;
   }
 
-  for (final from in [1, 2]) {
+  for (final from in [1, 2, 3]) {
     test('v$from -> v$current keeps the schema valid and the row intact',
         () async {
       final db = await migrated(from);
@@ -52,6 +53,9 @@ void main() {
       expect(settings.appearanceTheme, 'neobrutal');
       expect(settings.appearanceMode, 'system');
       expect(settings.appearanceMotion, isTrue);
+      // The host id is added empty and filled on first read, so an upgraded
+      // host doesn't need a data migration that invents one.
+      expect(settings.hostId, isEmpty);
       await db.close();
     });
   }
@@ -73,6 +77,18 @@ void main() {
     // v2 database would override a zone the admin chose after upgrading.
     final db = await migrated(2, timezone: 'UTC');
     expect(await timezoneOf(db), 'UTC');
+    await db.close();
+  });
+
+  test('the host id is generated once and then stays put', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final settings = SettingsService(db);
+
+    final first = await settings.ensureHostId();
+    expect(first, isNotEmpty);
+    // Saved logins are keyed on this, so a value that changed per call would
+    // quietly orphan every remembered account.
+    expect(await settings.ensureHostId(), first);
     await db.close();
   });
 

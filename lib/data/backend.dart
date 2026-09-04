@@ -29,8 +29,14 @@ abstract interface class Backend {
   // ---- settings ---------------------------------------------------
   Future<String> branding();
 
-  /// App name plus the host's appearance policy, readable before sign-in.
-  Future<AppearancePolicy> appearancePolicy();
+  /// Re-establishes a session from a token this device saved earlier.
+  /// Returns null when the host no longer accepts it (expired, swept, or the
+  /// password was reset), which is the signal to fall back to the login form.
+  Future<AuthSession?> resumeSession(String token);
+
+  /// Who this host is, what it's called, and how it wants to look — all
+  /// readable before sign-in.
+  Future<HostGreeting> greeting();
   Future<SettingsSnapshot> getSettings();
   Future<List<String>> timezones();
   Future<SettingsSnapshot> updateSettings(SettingsPatch patch);

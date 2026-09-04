@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -52,11 +54,40 @@ class SettingsService {
         appearanceMotion: r.appearanceMotion,
       );
 
-  /// What a device needs before anyone has a session: the branding name and,
-  /// if the host enforces one, the appearance to render. Fetching it pre-login
-  /// is what stops the theme snapping the moment someone signs in.
-  Future<Map<String, dynamic>> readPublicAppearance() async =>
-      (await read()).toAppearanceJson();
+  /// What a device needs before anyone has a session: who this host is, the
+  /// branding name, and — if enforced — the appearance to render. Fetching it
+  /// pre-login is what stops the theme snapping after sign-in, and what lets a
+  /// client recognise a host it already has saved logins for.
+  Future<Map<String, dynamic>> readPublicAppearance() async => {
+        ...(await read()).toAppearanceJson(),
+        'hostId': await ensureHostId(),
+      };
+
+  /// This host's stable identity, generated on first read and persisted.
+  ///
+  /// Generated lazily rather than at creation so hosts upgraded from an older
+  /// schema get one too, without a data migration that has to invent values.
+  Future<String> ensureHostId() async {
+    final row = await (_db.select(_db.appSettings)
+          ..where((s) => s.id.equals(0)))
+        .getSingle();
+    if (row.hostId.isNotEmpty) return row.hostId;
+
+    final generated = _newHostId();
+    await (_db.update(_db.appSettings)..where((s) => s.id.equals(0)))
+        .write(AppSettingsCompanion(hostId: Value(generated)));
+    _log.info('host_id_generated');
+    return generated;
+  }
+
+  /// Random, not derived from anything: a MAC- or name-derived id would change
+  /// when the hardware or the canteen's name does, which is the one thing this
+  /// value must not do.
+  String _newHostId() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
 
   /// The one field the login screen needs before anyone has a session —
   /// deliberately just this (PRD §6.8, matching v1's `GET /settings/branding`).

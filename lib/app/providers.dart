@@ -427,6 +427,15 @@ class SessionController extends Notifier<AuthSession?> {
     }
   }
 
+  /// Restores a session from a token saved on this device. Returns false when
+  /// the host declines it, which is the cue to show the login form.
+  Future<bool> resumeWithToken(String token) async {
+    final session = await ref.read(backendProvider).resumeSession(token);
+    if (session == null) return false;
+    state = session;
+    return true;
+  }
+
   Future<void> logout() async {
     try {
       await ref.read(backendProvider).logout();

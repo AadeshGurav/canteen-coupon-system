@@ -40,26 +40,29 @@ final deviceAppearanceProvider =
 /// device that cannot reach its host yet must still render *something*, and
 /// falling back to the device's own choice is the honest default. A host that
 /// is enforcing will be obeyed the moment it is reachable.
-final appearancePolicyProvider = FutureProvider<AppearancePolicy>((ref) async {
-  if (ref.watch(currentModeProvider) == null) return AppearancePolicy.none;
+final hostGreetingProvider = FutureProvider<HostGreeting>((ref) async {
+  if (ref.watch(currentModeProvider) == null) return HostGreeting.unknown;
   try {
     final Backend backend = ref.watch(backendProvider);
-    return await backend.appearancePolicy();
+    return await backend.greeting();
   } catch (_) {
-    return AppearancePolicy.none;
+    return HostGreeting.unknown;
   }
 });
+
+/// The host's appearance policy, from the same pre-login greeting.
+final appearancePolicyProvider = Provider<AppearancePolicy>((ref) =>
+    ref.watch(hostGreetingProvider).asData?.value.appearance ??
+    AppearancePolicy.none);
 
 /// What this device actually renders: the host's choice when it enforces one,
 /// otherwise the device's own.
 final effectiveAppearanceProvider = Provider<Appearance>((ref) {
   final device = ref.watch(deviceAppearanceProvider);
-  final policy = ref.watch(appearancePolicyProvider).asData?.value ??
-      AppearancePolicy.none;
-  return policy.resolve(device);
+  return ref.watch(appearancePolicyProvider).resolve(device);
 });
 
 /// True when the host is dictating appearance, so the Appearance controls can
 /// say so instead of silently discarding taps.
-final appearanceIsEnforcedProvider = Provider<bool>((ref) =>
-    ref.watch(appearancePolicyProvider).asData?.value.enforced ?? false);
+final appearanceIsEnforcedProvider =
+    Provider<bool>((ref) => ref.watch(appearancePolicyProvider).enforced);

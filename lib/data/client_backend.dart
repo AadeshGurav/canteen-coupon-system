@@ -1,4 +1,6 @@
 import '../core/app_mode.dart';
+import '../core/errors.dart';
+import '../core/role.dart';
 import '../domain/inventory.dart';
 import '../domain/ledger.dart';
 import '../domain/member.dart';
@@ -59,9 +61,27 @@ class ClientBackend implements Backend {
       _obj(await _api.getJson('/settings/branding'))['appName'] as String;
 
   @override
-  Future<AppearancePolicy> appearancePolicy() async =>
-      AppearancePolicy.fromWire(
-          _obj(await _api.getJson('/settings/appearance')));
+  Future<AuthSession?> resumeSession(String token) async {
+    final previous = _api.token;
+    _api.token = token;
+    try {
+      final me = _obj(await _api.getJson('/auth/me'));
+      return AuthSession(
+        token: token,
+        username: me['username'] as String,
+        role: Role.fromWire(me['role'] as String),
+      );
+    } on AppException {
+      // The host rejected it; leave the client as we found it so the login
+      // form isn't sending a token we know is dead.
+      _api.token = previous;
+      return null;
+    }
+  }
+
+  @override
+  Future<HostGreeting> greeting() async =>
+      HostGreeting.fromWire(_obj(await _api.getJson('/settings/appearance')));
 
   @override
   Future<SettingsSnapshot> getSettings() async =>
