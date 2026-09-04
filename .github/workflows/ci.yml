@@ -36,7 +36,7 @@ jobs:
 
       - run: node --check assets/web_admin/app.js
 
-      - run: flutter test
+      - run: flutter test --exclude-tags tool
 
   build-apk:
     name: Build release APK

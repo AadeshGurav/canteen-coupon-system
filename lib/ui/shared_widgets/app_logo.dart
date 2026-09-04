@@ -2,6 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
+/// Builds the painter for [tokens] at [size] — shared by the in-app logo and
+/// the launcher-icon generator so the two can never diverge.
+CouponPainter tiffinMarkPainter(TiffinTokens t, double size) => CouponPainter(
+      fill: t.color.accent,
+      ink: t.color.on(t.color.accent),
+      border: t.color.border,
+      shadow: t.color.shadow,
+      radius: t.shape.radius.topLeft.x.clamp(0.0, size / 3),
+      borderWidth: t.shape.borderBase * (size / 48),
+      shadowOffset: t.shape.shadowRestrained.isEmpty
+          ? Offset.zero
+          : t.shape.shadowRestrained.first.offset * (size / 48),
+      shadowBlur: t.shape.shadowRestrained.isEmpty
+          ? 0
+          : t.shape.shadowRestrained.first.blurRadius * (size / 48),
+    );
+
 /// The Tiffin mark: a coupon stub with a torn perforation.
 ///
 /// Drawn from the active theme's tokens rather than shipped as artwork, so it
@@ -19,32 +36,18 @@ class AppLogo extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: _CouponPainter(
-          fill: t.color.accent,
-          ink: t.color.on(t.color.accent),
-          border: t.color.border,
-          shadow: t.color.shadow,
-          // A zero-radius theme keeps a hard corner; a round one gets a stub
-          // that matches its cards.
-          radius: t.shape.radius.topLeft.x.clamp(0.0, size / 3),
-          borderWidth: t.shape.borderBase,
-          // Neobrutalism's shadow is a hard offset with no blur; the softer
-          // themes blur theirs. Reading both off the token keeps them honest.
-          shadowOffset: t.shape.shadowRestrained.isEmpty
-              ? Offset.zero
-              : t.shape.shadowRestrained.first.offset,
-          shadowBlur: t.shape.shadowRestrained.isEmpty
-              ? 0
-              : t.shape.shadowRestrained.first.blurRadius,
-        ),
-      ),
+      // A zero-radius theme keeps a hard corner; a round one gets a stub that
+      // matches its cards, and the shadow is hard or blurred per the theme —
+      // all read off the tokens rather than re-decided here.
+      child: CustomPaint(painter: tiffinMarkPainter(t, size)),
     );
   }
 }
 
-class _CouponPainter extends CustomPainter {
-  _CouponPainter({
+/// Paints the mark. Public so the launcher-icon generator can rasterise the
+/// exact same artwork the app draws, rather than a hand-made copy that drifts.
+class CouponPainter extends CustomPainter {
+  CouponPainter({
     required this.fill,
     required this.ink,
     required this.border,
@@ -138,7 +141,7 @@ class _CouponPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CouponPainter old) =>
+  bool shouldRepaint(CouponPainter old) =>
       old.fill != fill ||
       old.ink != ink ||
       old.border != border ||

@@ -1,0 +1,5 @@
+# The icon generator is a tool, not an assertion: it writes PNGs into assets/.
+# It carries the `tool` tag and is excluded from the default run (see the
+# Makefile `test` target and CI), then invoked deliberately via `make icons`.
+tags:
+  tool:
