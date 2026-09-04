@@ -31,11 +31,17 @@ is open on screen; see 2.4).
 
 1. Install and open the app on that phone.
 2. On the setup screen, tap **Run as host**.
-3. It goes straight to **sign in**. The server starts serving on the Wi-Fi on
-   its own in the background — there is no separate "start server" step.
-4. The first time only, the sign-in screen shows a generated **admin
-   password** for username `admin`. Write it down — it is shown once and never
-   logged. Sign in and change it from **Users**.
+3. **Set up this host** appears: choose the admin username (`admin` by
+   default) and a password. **Suggest a strong one** fills both boxes and
+   shows the password so you can write it down — it is stored only as a
+   one-way hash, so nobody, including the app, can read it back later.
+4. Tap **Create admin & continue**. You are signed straight in, and the server
+   starts serving on the Wi-Fi on its own — there is no separate "start
+   server" step.
+
+Both the username and the password can be changed later from **Users**. If the
+admin password is ever lost, **Forgot the password?** on the host device's own
+sign-in screen will set a new one (host device only, never over the network).
 
 Every other device installs the same app and taps **Run as client**, then
 picks the host from the list. If it doesn't appear (some routers block
@@ -180,8 +186,55 @@ and payee name.
 
 ### 3.9 Users (admin)
 
-Add accounts, change roles, reset passwords, deactivate. You can't deactivate
-or delete your own account.
+Add accounts, change usernames, change roles, reset passwords, deactivate.
+You can't deactivate or delete your own account.
+
+### 3.10 Appearance (everyone, per device)
+
+**⋮ ▸ Appearance** in the top bar, or **Settings ▸ Appearance**.
+
+- **Theme** — Neobrutal, Clean, Frost or Clay, each previewed live.
+- **Light or dark** — or follow the phone's own setting.
+- **Animations** — turn them off entirely. Your phone's own "reduce motion"
+  accessibility setting always wins, whatever is chosen here.
+
+Each phone keeps its own choice. An admin can make every device match: turn on
+**Use this look everywhere** at the bottom of the screen. Devices then show the
+host's look, and say so rather than quietly ignoring taps.
+
+The same screen lists **saved logins** and clears them.
+
+### 3.11 Reports & backup (admin, host only)
+
+**Spreadsheet report** — an `.xlsx` for Excel or Google Sheets, with a tab per
+area (summary, members, balances, scans, top-ups, refunds, expenses, menu).
+Pick a date range and which tabs you want, then it goes out through the normal
+share sheet. It is for reading and printing; it is *not* a way to put data
+back.
+
+**Backup** — a complete copy of the canteen in one `.tiffin` file: members,
+balances, history, settings and accounts. Use it to move to a new phone, or to
+recover from a lost one.
+
+- Leave **Protect with a password** on unless you have a reason not to. The
+  file holds member names and account details. Write the password down —
+  without it the backup cannot be opened by anyone, including you.
+- **Restore from a backup** replaces *everything* on this device. It shows
+  what the file contains first and asks you to type REPLACE. Your current data
+  is kept beside the restored copy rather than deleted.
+
+Take a backup before changing phones, and keep one somewhere off the phone.
+
+### 3.12 Staying signed in
+
+A phone remembers who signs in on each host it has used, so returning to a
+known host skips the login form. Usernames are always remembered; a password
+is only kept if you tick **Remember password on this device**. Clear any of it
+from **Appearance ▸ Saved logins**.
+
+Because hosts are recognised by identity rather than address, this keeps
+working when the router hands the host a different IP — and a phone used at two
+canteens keeps both sets of accounts.
 
 ---
 

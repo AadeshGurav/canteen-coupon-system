@@ -110,9 +110,25 @@ class AppDatabase extends _$AppDatabase {
 
 /// Where the host's database lives. Exposed because backup and restore have
 /// to address the file itself, not just the connection.
+///
+/// Renames a pre-Tiffin `canteen.sqlite` into place on the way past. A host
+/// that has been running for weeks holds the only copy of its data, and a
+/// cosmetic rename must not be the thing that loses it — so the old file is
+/// moved rather than ignored, along with any journal sitting beside it.
 Future<File> appDatabaseFile() async {
   final dir = await getApplicationDocumentsDirectory();
-  return File(p.join(dir.path, 'canteen.sqlite'));
+  final file = File(p.join(dir.path, 'tiffin.sqlite'));
+  if (file.existsSync()) return file;
+
+  final legacy = File(p.join(dir.path, 'canteen.sqlite'));
+  if (legacy.existsSync()) {
+    for (final suffix in const ['-wal', '-shm']) {
+      final sidecar = File('${legacy.path}$suffix');
+      if (sidecar.existsSync()) sidecar.renameSync('${file.path}$suffix');
+    }
+    legacy.renameSync(file.path);
+  }
+  return file;
 }
 
 LazyDatabase _openConnection() {

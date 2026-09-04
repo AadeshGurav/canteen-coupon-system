@@ -1,8 +1,8 @@
-name: canteen_coupon
+name: tiffin
 description: >-
-  Canteen unit-based coupon system — a single native Flutter app that runs as
-  either the LAN host (embedded server + on-device database) or a client, from
-  the same APK. See docs/PRD.md §13–§14.
+  Tiffin — a unit-based canteen coupon system. One native Flutter app that runs
+  as either the LAN host (embedded server + on-device database) or a client,
+  from the same APK. See docs/PRD.md §13–§14.
 publish_to: none
 version: 2.0.0+1
 

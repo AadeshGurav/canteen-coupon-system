@@ -1,11 +1,11 @@
-import 'package:canteen_coupon/ui/shared_widgets/app_logo.dart';
-import 'package:canteen_coupon/ui/shared_widgets/brand_splash.dart';
-import 'package:canteen_coupon/ui/shared_widgets/nb_button.dart';
-import 'package:canteen_coupon/ui/shared_widgets/nb_surface.dart';
-import 'package:canteen_coupon/ui/shared_widgets/nb_text_field.dart';
-import 'package:canteen_coupon/ui/theme/app_theme.dart';
-import 'package:canteen_coupon/ui/theme/theme_catalog.dart';
-import 'package:canteen_coupon/ui/theme/tokens.dart';
+import 'package:tiffin/ui/shared_widgets/app_logo.dart';
+import 'package:tiffin/ui/shared_widgets/brand_splash.dart';
+import 'package:tiffin/ui/shared_widgets/nb_button.dart';
+import 'package:tiffin/ui/shared_widgets/nb_surface.dart';
+import 'package:tiffin/ui/shared_widgets/nb_text_field.dart';
+import 'package:tiffin/ui/theme/app_theme.dart';
+import 'package:tiffin/ui/theme/theme_catalog.dart';
+import 'package:tiffin/ui/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

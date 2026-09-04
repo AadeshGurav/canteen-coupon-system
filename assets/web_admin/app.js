@@ -1,4 +1,4 @@
-/* Canteen desktop admin — a dependency-free SPA over the host's /api (PRD
+/* Tiffin desktop admin — a dependency-free SPA over the host's /api (PRD
    §13.4). Scanning is intentionally absent (native app only). Served by the
    embedded shelf server from the same origin, so fetch('/api/...') needs no
    CORS handling. Hash routing means the server only ever serves index.html. */
@@ -28,8 +28,8 @@ const $ = (sel, root = document) => root.querySelector(sel);
 
 // --- api client -----------------------------------------------------------
 const api = {
-  get token() { return localStorage.getItem('canteen_token'); },
-  set token(v) { v ? localStorage.setItem('canteen_token', v) : localStorage.removeItem('canteen_token'); },
+  get token() { return localStorage.getItem('tiffin_token'); },
+  set token(v) { v ? localStorage.setItem('tiffin_token', v) : localStorage.removeItem('tiffin_token'); },
 
   async req(method, path, body) {
     let res;
@@ -172,8 +172,8 @@ views.login = async () => {
         return;
       }
       api.token = s.token;
-      localStorage.setItem('canteen_role', s.role);
-      localStorage.setItem('canteen_user', s.username);
+      localStorage.setItem('tiffin_role', s.role);
+      localStorage.setItem('tiffin_user', s.username);
       location.hash = '#/members';
     } catch (e) {
       err.textContent = e.message;
@@ -833,7 +833,7 @@ async function render() {
     app.replaceChildren(await views.login());
     return;
   }
-  const role = localStorage.getItem('canteen_role');
+  const role = localStorage.getItem('tiffin_role');
   const allowed = role === 'admin' ? NAV : NAV.filter(([k]) => ['topups', 'purchase'].includes(k));
   const view = views[route] || views.members;
 
@@ -845,7 +845,7 @@ async function render() {
       h('div', { class: 'brand' }, 'TIFFIN · ADMIN'),
       ...allowed.map(([k, label]) => h('a', { href: '#/' + k, class: route === k ? 'active' : '' }, label)),
       h('div', { class: 'spacer' }),
-      h('div', { class: 'muted' }, localStorage.getItem('canteen_user') + ' · ' + role),
+      h('div', { class: 'muted' }, localStorage.getItem('tiffin_user') + ' · ' + role),
       h('button', { class: 'ghost', onclick: () => { api.token = null; location.hash = '#/login'; } }, 'Sign out'));
     _mainEl = h('main', {}, spinner());
     app.replaceChildren(h('div', { class: 'shell' }, side, _mainEl));

@@ -1,9 +1,9 @@
-import 'package:canteen_coupon/core/errors.dart';
-import 'package:canteen_coupon/core/role.dart';
-import 'package:canteen_coupon/data/local/database.dart';
-import 'package:canteen_coupon/domain/ops.dart';
-import 'package:canteen_coupon/services/auth_service.dart';
-import 'package:canteen_coupon/services/user_service.dart';
+import 'package:tiffin/core/errors.dart';
+import 'package:tiffin/core/role.dart';
+import 'package:tiffin/data/local/database.dart';
+import 'package:tiffin/domain/ops.dart';
+import 'package:tiffin/services/auth_service.dart';
+import 'package:tiffin/services/user_service.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';

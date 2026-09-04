@@ -1,6 +1,6 @@
-import 'package:canteen_coupon/ui/theme/oklch.dart';
-import 'package:canteen_coupon/ui/theme/theme_catalog.dart';
-import 'package:canteen_coupon/ui/theme/tokens.dart';
+import 'package:tiffin/ui/theme/oklch.dart';
+import 'package:tiffin/ui/theme/theme_catalog.dart';
+import 'package:tiffin/ui/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

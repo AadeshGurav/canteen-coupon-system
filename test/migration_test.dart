@@ -1,5 +1,5 @@
-import 'package:canteen_coupon/data/local/database.dart';
-import 'package:canteen_coupon/services/settings_service.dart';
+import 'package:tiffin/data/local/database.dart';
+import 'package:tiffin/services/settings_service.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';

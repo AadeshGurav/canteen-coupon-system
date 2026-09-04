@@ -13,7 +13,7 @@ class AppConfig {
 
   /// mDNS/Bonjour service type the host advertises and the client scans for
   /// (PRD §13.5).
-  static const String discoveryServiceType = '_canteen._tcp';
+  static const String discoveryServiceType = '_tiffin._tcp';
 
   /// Default TCP port for the embedded server. The host operator can override
   /// it in the mode picker; discovery carries the actual chosen port so

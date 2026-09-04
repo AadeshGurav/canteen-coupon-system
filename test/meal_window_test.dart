@@ -1,5 +1,5 @@
-import 'package:canteen_coupon/core/app_mode.dart';
-import 'package:canteen_coupon/core/time/meal_window.dart';
+import 'package:tiffin/core/app_mode.dart';
+import 'package:tiffin/core/time/meal_window.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;

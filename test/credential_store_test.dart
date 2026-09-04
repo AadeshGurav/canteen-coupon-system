@@ -1,4 +1,4 @@
-import 'package:canteen_coupon/app/credential_store.dart';
+import 'package:tiffin/app/credential_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

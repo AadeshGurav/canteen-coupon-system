@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:canteen_coupon/data/local/database.dart';
-import 'package:canteen_coupon/server/host_container.dart';
-import 'package:canteen_coupon/server/server.dart';
-import 'package:canteen_coupon/server/tls.dart';
+import 'package:tiffin/data/local/database.dart';
+import 'package:tiffin/server/host_container.dart';
+import 'package:tiffin/server/server.dart';
+import 'package:tiffin/server/tls.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;

@@ -24,7 +24,7 @@ class DiscoveredHost {
   int get hashCode => Object.hash(host, port);
 }
 
-/// Host mode: publish this device as `_canteen._tcp` so clients find it without
+/// Host mode: publish this device as `_tiffin._tcp` so clients find it without
 /// anyone typing an IP (PRD §13.5).
 ///
 /// Robust by design: the first `register` may fail (no Wi-Fi yet, or the OS

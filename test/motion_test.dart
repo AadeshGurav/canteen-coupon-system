@@ -1,7 +1,7 @@
-import 'package:canteen_coupon/ui/shared_widgets/motion.dart';
-import 'package:canteen_coupon/ui/theme/app_theme.dart';
-import 'package:canteen_coupon/ui/theme/theme_catalog.dart';
-import 'package:canteen_coupon/ui/theme/tokens.dart';
+import 'package:tiffin/ui/shared_widgets/motion.dart';
+import 'package:tiffin/ui/theme/app_theme.dart';
+import 'package:tiffin/ui/theme/theme_catalog.dart';
+import 'package:tiffin/ui/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

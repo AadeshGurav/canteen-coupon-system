@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:canteen_coupon/core/errors.dart';
-import 'package:canteen_coupon/core/role.dart';
-import 'package:canteen_coupon/data/local/database.dart';
-import 'package:canteen_coupon/services/backup_service.dart';
+import 'package:tiffin/core/errors.dart';
+import 'package:tiffin/core/role.dart';
+import 'package:tiffin/data/local/database.dart';
+import 'package:tiffin/services/backup_service.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';

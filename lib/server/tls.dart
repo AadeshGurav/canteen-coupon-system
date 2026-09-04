@@ -27,7 +27,7 @@ class SelfSignedTls {
 
   /// Generate (or regenerate) the keypair + certificate. Returns the cert's
   /// not-after date for display.
-  Future<DateTime> generate({String commonName = 'canteen.local'}) async {
+  Future<DateTime> generate({String commonName = 'tiffin.local'}) async {
     await Directory(_dir).create(recursive: true);
 
     final pair = CryptoUtils.generateRSAKeyPair(keySize: 2048);

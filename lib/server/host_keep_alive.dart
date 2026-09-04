@@ -19,7 +19,7 @@ class HostKeepAlive {
     if (_initialized) return;
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'canteen_host',
+        channelId: 'tiffin_host',
         channelName: 'Canteen host server',
         channelDescription:
             'Shown while this device is serving the canteen on the LAN.',

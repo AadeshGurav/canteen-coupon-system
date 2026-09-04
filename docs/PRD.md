@@ -1,4 +1,4 @@
-# PRD — Canteen Unit-Based Coupon System
+# PRD — Tiffin (unit-based canteen coupon system)
 
 **Status:** Active build — **v2 architecture pivot approved (native Flutter app, see §13–§14), supersedes the original browser/FastAPI/MongoDB delivery model described in earlier sections of this document.** Where a section conflicts with §13–§14, the later section wins; conflicts are marked inline with strikethrough + a "Superseded" note rather than silently deleted, so the reasoning trail stays intact.
 **Owner:** Aadesh (developer/architect) — building for a canteen contractor client
@@ -298,8 +298,8 @@ This is the direct answer to the "can we host a web server from the same host ap
 
 ### 13.5 Discovery mechanics
 
-- Host mode calls `nsd.register()` advertising a service (e.g., `_canteen._tcp`) with the host's chosen port.
-- Client mode calls `nsd.startDiscovery('_canteen._tcp')` and lists found hosts by their advertised name (e.g., the canteen's configured app name, §6.8) rather than requiring the operator to type an IP or hostname — this satisfies usability heuristic §11.1 #6 (recognition over recall) directly.
+- Host mode calls `nsd.register()` advertising a service (e.g., `_tiffin._tcp`) with the host's chosen port.
+- Client mode calls `nsd.startDiscovery('_tiffin._tcp')` and lists found hosts by their advertised name (e.g., the canteen's configured app name, §6.8) rather than requiring the operator to type an IP or hostname — this satisfies usability heuristic §11.1 #6 (recognition over recall) directly.
 - If a host disappears and reappears (Wi-Fi toggle, app restart), clients should re-resolve automatically rather than requiring a manual reconnect, mirroring the resilience the old `.local`/mDNS setup was designed for.
 
 ### 13.6 TLS / certificates — decision

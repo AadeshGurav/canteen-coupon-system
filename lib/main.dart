@@ -40,13 +40,13 @@ Future<void> main() async {
         sharedPreferencesProvider.overrideWithValue(b.prefs),
         appModeStoreProvider.overrideWithValue(b.modeStore),
       ],
-      child: const CanteenApp(),
+      child: const TiffinApp(),
     ),
   );
 }
 
-class CanteenApp extends ConsumerWidget {
-  const CanteenApp({super.key});
+class TiffinApp extends ConsumerWidget {
+  const TiffinApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
