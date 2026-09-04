@@ -5,6 +5,10 @@
 /// This file holds only values that are genuinely fixed for a given build:
 /// the discovery service type, the default port, wire-format constants.
 class AppConfig {
+  /// Stamped into backup manifests so a restore can say which build wrote a
+  /// file. Kept in step with pubspec.yaml's `version:` by hand.
+  static const String appVersion = '2.0.0';
+
   const AppConfig._();
 
   /// mDNS/Bonjour service type the host advertises and the client scans for

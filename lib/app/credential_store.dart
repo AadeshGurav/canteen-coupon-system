@@ -104,7 +104,10 @@ class CredentialStore {
   CredentialStore([FlutterSecureStorage? storage])
       : _storage = storage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
+              // v11's Android default is already AES-GCM with a KeyStore-
+              // wrapped key, so no options are needed here.
+              // Readable after a reboot without the phone being unlocked, so a
+              // host that power-cycles overnight still comes back signed in.
               iOptions: IOSOptions(
                 accessibility: KeychainAccessibility.first_unlock,
               ),

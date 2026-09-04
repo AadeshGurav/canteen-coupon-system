@@ -16,6 +16,7 @@ import 'menu_categories_screen.dart';
 import 'menu_screen.dart';
 import 'purchase_schedule_screen.dart';
 import 'recipes_screen.dart';
+import 'reports_screen.dart';
 import 'refunds_screen.dart';
 import 'scan_log_screen.dart';
 import 'settings_screen.dart';
@@ -63,6 +64,9 @@ class AdminDashboard extends ConsumerWidget {
           () => const SettingsScreen()),
       _Dest('Users', Icons.admin_panel_settings, NbTone.system,
           () => const UsersScreen()),
+      if (isHost)
+        _Dest('Reports & backup', Icons.table_view, NbTone.system,
+            () => const ReportsScreen()),
       if (isHost)
         _Dest('Hosting & LAN', Icons.wifi_tethering, NbTone.system,
             () => const HostingScreen()),

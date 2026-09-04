@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.canteen.canteen_coupon"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage 11 requires API 37. AGP 9.1 only *recommends* up
+    // to 36, so the check is suppressed in gradle.properties; nothing here
+    // targets a 37-only API, this is a compile-against level.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

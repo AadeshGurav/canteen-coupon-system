@@ -1,7 +1,11 @@
+import 'dart:io';
+
+import '../core/config.dart';
 import '../core/logging.dart';
 import '../data/local/database.dart';
 import '../services/artifact_store.dart';
 import '../services/auth_service.dart';
+import '../services/backup_service.dart';
 import '../services/billing_service.dart';
 import '../services/expense_service.dart';
 import '../services/ingredient_service.dart';
@@ -12,6 +16,7 @@ import '../services/purchase_schedule_service.dart';
 import '../services/qr_service.dart';
 import '../services/recipe_service.dart';
 import '../services/refund_service.dart';
+import '../services/report_service.dart';
 import '../services/scan_service.dart';
 import '../services/settings_service.dart';
 import '../services/topup_service.dart';
@@ -38,6 +43,8 @@ class HostContainer {
     required this.recipes,
     required this.purchaseSchedule,
     required this.notifications,
+    required this.reports,
+    required this.backups,
   });
 
   /// [documentsDir] is where the SQLite file and generated artifacts live.
@@ -51,6 +58,7 @@ class HostContainer {
     final billing = BillingService();
     final auth = AuthService(db, sessionTtl: sessionTtl);
     final settings = SettingsService(db);
+    final expenses = ExpenseService(db);
 
     return HostContainer._(
       db: db,
@@ -62,12 +70,18 @@ class HostContainer {
       topups: TopupService(db, settings, billing, qr, artifacts),
       refunds: RefundService(db, settings),
       menu: MenuService(db),
-      expenses: ExpenseService(db),
+      expenses: expenses,
       users: UserService(db, auth),
       ingredients: IngredientService(db),
       recipes: RecipeService(db),
       purchaseSchedule: PurchaseScheduleService(db),
       notifications: NotificationService(db, settings),
+      reports: ReportService(db, settings, expenses),
+      backups: BackupService(
+        db,
+        appVersion: AppConfig.appVersion,
+        workingDirectory: Directory(documentsDir),
+      ),
     );
   }
 
@@ -86,6 +100,8 @@ class HostContainer {
   final RecipeService recipes;
   final PurchaseScheduleService purchaseSchedule;
   final NotificationService notifications;
+  final ReportService reports;
+  final BackupService backups;
 
   final _log = log('host');
 

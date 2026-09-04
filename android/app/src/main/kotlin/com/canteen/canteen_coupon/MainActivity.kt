@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,6 +25,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private val channelName = "tiffin/hotspot"
+    private val screenChannelName = "tiffin/screen"
     private val permRequestCode = 4711
 
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
@@ -31,6 +33,27 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Keeping the screen on while hosting. Replaces wakelock_plus, which
+        // dragged in package_info_plus — a plugin that no longer compiles
+        // under this Flutter's Kotlin setup. One window flag is all it did.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, screenChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setKeepAwake" -> {
+                        val on = call.argument<Boolean>("enabled") ?: false
+                        runOnUiThread {
+                            if (on) {
+                                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            } else {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
+                        }
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

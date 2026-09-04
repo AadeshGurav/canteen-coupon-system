@@ -1,14 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../core/app_mode.dart';
 import '../core/config.dart';
+import '../core/screen_awake.dart';
 import '../core/logging.dart';
 import '../data/backend.dart';
 import '../data/client_backend.dart';
@@ -18,6 +19,7 @@ import '../data/remote/api_client.dart';
 import '../discovery/discovery.dart';
 import '../domain/ops.dart';
 import '../server/host_container.dart';
+import '../services/backup_service.dart';
 import '../server/host_keep_alive.dart';
 import '../server/server.dart';
 import '../server/tls.dart';
@@ -198,6 +200,8 @@ class HostServingState {
 }
 
 class HostServingController extends Notifier<HostServingState> {
+  final _log = log('hosting');
+
   @override
   HostServingState build() => const HostServingState();
 
@@ -293,6 +297,52 @@ class HostServingController extends Notifier<HostServingState> {
     await ref.read(currentModeProvider.notifier).clear();
   }
 
+  /// Replaces this host's database with the contents of a backup file.
+  ///
+  /// Ordered so nothing is destroyed until the file has been proven readable:
+  /// stage and validate first, then stop serving, keep a copy of the current
+  /// database beside it, and only then swap. If the staging step throws — a
+  /// wrong password, a truncated file, the wrong file entirely — the live
+  /// data has not been touched.
+  Future<BackupManifest> restoreFromBackup(
+    List<int> bytes, {
+    String? passphrase,
+  }) async {
+    final container = await ref.read(hostContainerProvider.future);
+    final live = await appDatabaseFile();
+    final staged = File('${live.path}.incoming');
+
+    final manifest = await container.backups
+        .stageRestore(bytes, staged, passphrase: passphrase);
+
+    await stop();
+    await ref.read(hostDatabaseProvider).close();
+
+    try {
+      if (live.existsSync()) {
+        // Kept rather than deleted: if a restore turns out to be the wrong
+        // file, the previous database is still sitting next to it.
+        live.copySync('${live.path}.previous');
+      }
+      // SQLite keeps its journal beside the database. Leaving a stale WAL next
+      // to a swapped-in file is how a restore silently half-applies.
+      for (final suffix in const ['-wal', '-shm']) {
+        final sidecar = File('${live.path}$suffix');
+        if (sidecar.existsSync()) sidecar.deleteSync();
+      }
+      staged.renameSync(live.path);
+    } finally {
+      ref.invalidate(hostDatabaseProvider);
+      ref.invalidate(hostContainerProvider);
+      ref.invalidate(setupRequiredProvider);
+      ref.invalidate(sessionProvider);
+      state = const HostServingState();
+    }
+
+    _log.warning('backup_restored rows=${manifest.totalRows}');
+    return manifest;
+  }
+
   Future<void> generateCert() async {
     state = state.copyWith(busy: true, clearError: true);
     try {
@@ -320,8 +370,9 @@ final hostServingProvider =
 /// backgrounded app alive).
 final hostWakelockProvider = Provider<void>((ref) {
   final running = ref.watch(hostRunningProvider);
-  WakelockPlus.toggle(enable: running);
-  ref.onDispose(() => WakelockPlus.disable());
+  const screen = ScreenAwake();
+  screen.set(enabled: running);
+  ref.onDispose(() => screen.set(enabled: false));
 });
 
 // ===========================================================================

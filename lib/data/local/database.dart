@@ -108,10 +108,14 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// Where the host's database lives. Exposed because backup and restore have
+/// to address the file itself, not just the connection.
+Future<File> appDatabaseFile() async {
+  final dir = await getApplicationDocumentsDirectory();
+  return File(p.join(dir.path, 'canteen.sqlite'));
+}
+
 LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'canteen.sqlite'));
-    return NativeDatabase.createInBackground(file);
-  });
+  return LazyDatabase(
+      () async => NativeDatabase.createInBackground(await appDatabaseFile()));
 }

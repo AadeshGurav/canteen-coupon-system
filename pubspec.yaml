@@ -70,11 +70,12 @@ dependencies:
   # --- Small cross-cutting helpers ---
   http: ^1.2.2
   shared_preferences: ^2.3.2
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^11.0.0
+  archive: ^4.0.2        # .xlsx and .tiffin containers are both zips
+  file_picker: ^12.2.0   # choose a backup to restore
   # Keeps the screen awake while a device is hosting (PRD §13.3). On iOS this
   # is the only lever available — it stops the display timeout; it cannot keep
   # a backgrounded app alive (nothing can).
-  wakelock_plus: ^1.2.8
   crypto: ^3.0.5
   collection: ^1.18.0
   intl: ^0.20.2
